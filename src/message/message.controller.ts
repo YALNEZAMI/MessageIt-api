@@ -29,6 +29,10 @@ export class MessageController {
   findOne(@Param('id') id: string) {
     return this.messageService.findOne(id);
   }
+  @Get('search/:key')
+  getMessagesByKey(@Param('key') key: string) {
+    return this.messageService.getMessagesByKey(key);
+  }
   @Get('/ofConv/:idConv/:limit')
   findMessageOfConv(
     @Param('idConv') idConv: string,

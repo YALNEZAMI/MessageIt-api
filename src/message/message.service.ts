@@ -37,7 +37,16 @@ export class MessageService {
     }
     return msgs;
   }
-  async findMessageOfConv(idConv: string, limit: number) {
+  async findMessageOfConv(idConv: string, skip: number) {
+    console.log('skip', skip);
+
+    const totalCount = await this.messageModel.countDocuments({ conv: idConv });
+    console.log('totalCount', totalCount);
+    let limit: number = 20;
+    if (totalCount - skip < 20) {
+      limit = totalCount - skip;
+      if (limit < 0) return [];
+    }
     let msgs: any;
     if (limit === 0) {
       msgs = await this.messageModel.find({ conv: idConv });
@@ -45,8 +54,8 @@ export class MessageService {
     } else {
       msgs = await this.messageModel
         .find({ conv: idConv })
-        .skip(limit)
-        .limit(20)
+        .skip(skip)
+        .limit(limit)
         .sort({ _id: -1 })
         .exec();
 
@@ -56,10 +65,24 @@ export class MessageService {
         msg.sender = user;
       }
     }
+    console.log('msgs', msgs.length);
 
     return msgs.reverse();
   }
+  async getMessagesByKey(key: string) {
+    const messages = await this.messageModel
+      .find({
+        text: { $regex: key, $options: 'i' },
+      })
+      .exec();
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const user = await this.userService.findeUserForMessage(msg.sender);
+      msg.sender = user;
+    }
 
+    return messages;
+  }
   findOne(id: string) {
     return this.findOne(id).exec();
   }
