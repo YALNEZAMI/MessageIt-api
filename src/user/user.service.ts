@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -182,6 +183,13 @@ export class UserService {
       return user;
     }
   }
+  async setStatus(id: string, object: { status: string }) {
+    await this.UserModel.updateOne({ _id: id }, object).exec();
+    return this.UserModel.findOne(
+      { _id: id },
+      { password: 0, email: 0, codePassword: 0 },
+    ).exec();
+  }
   async resetPassword(updateUserDto: UpdateUserDto) {
     updateUserDto.email = updateUserDto.email.toLowerCase();
     updateUserDto.password = updateUserDto.password.trim();
@@ -213,20 +221,25 @@ export class UserService {
     const nameOldPhotoSplit = oldPhoto.split('/');
     oldPhoto = nameOldPhotoSplit[nameOldPhotoSplit.length - 1];
     console.log(oldPhoto);
-
-    fs.access('assets/imagesOfConvs/' + oldPhoto, fs.constants.F_OK, (err) => {
-      if (err) {
-        // Handle the case where the file does not exist
-      } else {
-        fs.unlink('assets/imagesOfConvs/' + oldPhoto, (err) => {
+    if (oldPhoto !== process.env.defaultUserPhoto) {
+      fs.access(
+        'assets/imagesOfConvs/' + oldPhoto,
+        fs.constants.F_OK,
+        (err) => {
           if (err) {
-            console.error(err);
-            return;
+            // Handle the case where the file does not exist
+          } else {
+            fs.unlink('assets/imagesOfConvs/' + oldPhoto, (err) => {
+              if (err) {
+                console.error(err);
+                return;
+              }
+            });
+            // Handle the case where the file exists
           }
-        });
-        // Handle the case where the file exists
-      }
-    });
+        },
+      );
+    }
     const photoName = process.env.api_url + '/user/uploads/' + file.filename;
     await this.UserModel.updateOne({ _id: id }, { photo: photoName });
     return { photo: photoName };

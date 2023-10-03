@@ -188,15 +188,16 @@ export class ConvService {
        *  the name is the name of the first person in the conversation who is not the current user
        *
        */
-      if (conv.name == undefined) {
-        if (members.length > 2) {
-          conv.name = 'Group chat';
-        } else if (members.length == 1) {
-          const me = await this.userService.findOne(id);
-          conv.name = me.firstName + ' ' + me.lastName;
-        } else {
-          if (members[0] == id) {
+      if (members.length > 2) {
+        conv.name = 'Group chat';
+      } else if (members.length == 1) {
+        const me = await this.userService.findOne(id);
+        conv.name = me.firstName + ' ' + me.lastName;
+      } else {
+        if ((members.length = 2)) {
+          if (members[0]._id == id) {
             const friend = await this.userService.findOne(members[1]);
+
             if (friend != null) {
               conv.name = friend.firstName + ' ' + friend.lastName;
             } else {
@@ -224,29 +225,34 @@ export class ConvService {
        * if the conv is a conversation with more than one person,
        * the image is the image of the first person in the conversation who is not the current user
        */
-      if (conv.photo == undefined) {
-        if (members.length == 1) {
-          const me = await this.userService.findOne(id);
-          if (me == null || me.photo == undefined) {
+      if (members.length == 1) {
+        const me = await this.userService.findOne(id);
+        conv.photo = me.photo;
+      }
+      if (members.length > 2) {
+        if (
+          conv.photo == undefined ||
+          conv.photo == null ||
+          conv.photo == ' ' ||
+          conv.photo == ''
+        ) {
+          conv.photo = process.env.api_url + '/user/uploads/group.png';
+        }
+      }
+      if (members.length == 2) {
+        if (members[0]._id == id) {
+          const friend = await this.userService.findOne(members[1]);
+          if (friend == null || friend.photo == undefined) {
             conv.photo = ' ';
           } else {
-            conv.photo = me.photo;
+            conv.photo = friend.photo;
           }
-        } else if (members.length == 2) {
-          if (members[0] == id) {
-            const friend = await this.userService.findOne(members[1]);
-            if (friend == null || friend.photo == undefined) {
-              conv.photo = ' ';
-            } else {
-              conv.photo = friend.photo;
-            }
+        } else {
+          const friend = await this.userService.findOne(members[0]);
+          if (friend == null || friend.photo == undefined) {
+            conv.photo = ' ';
           } else {
-            const friend = await this.userService.findOne(members[0]);
-            if (friend == null || friend.photo == undefined) {
-              conv.photo = ' ';
-            } else {
-              conv.photo = friend.photo;
-            }
+            conv.photo = friend.photo;
           }
         }
       }
@@ -380,21 +386,28 @@ export class ConvService {
     let oldPhoto = conv.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
     oldPhoto = nameOldPhotoSplit[nameOldPhotoSplit.length - 1];
-    console.log(oldPhoto);
-
-    fs.access('assets/imagesOfConvs/' + oldPhoto, fs.constants.F_OK, (err) => {
-      if (err) {
-        // Handle the case where the file does not exist
-      } else {
-        fs.unlink('assets/imagesOfConvs/' + oldPhoto, (err) => {
+    if (
+      oldPhoto != process.env.defaultUserPhoto &&
+      oldPhoto != process.env.defaultGroupPhoto
+    ) {
+      fs.access(
+        'assets/imagesOfConvs/' + oldPhoto,
+        fs.constants.F_OK,
+        (err) => {
           if (err) {
-            console.error(err);
-            return;
+            // Handle the case where the file does not exist
+          } else {
+            fs.unlink('assets/imagesOfConvs/' + oldPhoto, (err) => {
+              if (err) {
+                console.error(err);
+                return;
+              }
+            });
+            // Handle the case where the file exists
           }
-        });
-        // Handle the case where the file exists
-      }
-    });
+        },
+      );
+    }
     await this.messageService.removeAllFromConv(id);
     return this.ConvModel.deleteMany({ _id: id }).exec();
   }

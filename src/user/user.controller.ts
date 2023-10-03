@@ -74,6 +74,12 @@ export class UserController {
 
     return res;
   }
+  @Patch('setStatus/:id')
+  async setStatus(@Param('id') id: string, @Body() body: any) {
+    const res = await this.userService.setStatus(id, body);
+
+    return res;
+  }
   @Patch('/password/reset')
   async resetPassword(@Body() updateUserDto: UpdateUserDto) {
     const res = await this.userService.resetPassword(updateUserDto);
