@@ -8,14 +8,18 @@ import { MessageModule } from './message/message.module';
 import { WebSocketsModule } from './web-sockets/web-sockets.module';
 import { SessionModule } from './session/session.module';
 import { MailerModule } from './mailer/mailer.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      envFilePath: '.env',
+      isGlobal: true,
+    }),
+    MongooseModule.forRoot(process.env.mongo_url, {
+      dbName: process.env.mongo_db_name,
+    }),
     UserModule,
-    MongooseModule.forRoot(
-      'mongodb+srv://yalnezami:1122334455@cluster0.zprpqjl.mongodb.net/?retryWrites=true&w=majority',
-      { dbName: 'nestNgMessenger' },
-    ),
     ConvModule,
     MessageModule,
     WebSocketsModule,
@@ -25,4 +29,8 @@ import { MailerModule } from './mailer/mailer.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {
+  constructor() {
+    console.log(process.env.mongo_url);
+  }
+}

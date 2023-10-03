@@ -7,7 +7,6 @@ import { Conv, ConvDocument } from './entities/conv.entity';
 import { UserService } from 'src/user/user.service';
 import { MessageService } from 'src/message/message.service';
 import * as fs from 'fs';
-import { env } from 'src/env';
 //service of conversation
 @Injectable()
 export class ConvService {
@@ -70,7 +69,7 @@ export class ConvService {
     if (exist.bool) {
       return await this.findOne(exist.idConv);
     } else {
-      createConvDto.photo = env.api_url + '/user/uploads/user.png';
+      createConvDto.photo = process.env.api_url + '/user/uploads/user.png';
       createConvDto.status = 'online';
       const convCreated = await this.ConvModel.create(createConvDto);
       const newId = convCreated._id.toString();
@@ -394,7 +393,7 @@ export class ConvService {
         // Handle the case where the file exists
       }
     });
-    const photoName = env.api_url + '/user/uploads/' + photo.filename;
+    const photoName = process.env.api_url + '/user/uploads/' + photo.filename;
     await this.ConvModel.updateOne({ _id: id }, { photo: photoName });
     return { photo: photoName };
   }

@@ -29,16 +29,43 @@ export class MessageController {
   findOne(@Param('id') id: string) {
     return this.messageService.findOne(id);
   }
+  @Get('range/:idConv/:idMessage')
+  getRange(
+    @Param('idConv') idConv: string,
+    @Param('idMessage') idMessage: string,
+  ) {
+    return this.messageService.getRange(idConv, idMessage);
+  }
+  //MessageSearchedGroup/${idConv}/${range}
+  @Get('MessageSearchedGroup/:idConv/:idMessage')
+  getMessageSearchedGroup(
+    @Param('idConv') idConv: string,
+    @Param('idMessage') idMessage: string,
+  ) {
+    return this.messageService.getMessageSearchedGroup(idConv, idMessage);
+  }
+  ///appendDown/${idConv}/${range}
+  @Get('appendDown/:idConv/:idMessage')
+  appendDown(
+    @Param('idConv') idConv: string,
+    @Param('idMessage') idMessage: string,
+  ) {
+    return this.messageService.appendDown(idConv, idMessage);
+  }
+  @Get('appendUp/:idConv/:idMessage')
+  appendUp(
+    @Param('idConv') idConv: string,
+    @Param('idMessage') idMessage: string,
+  ) {
+    return this.messageService.appendUp(idConv, idMessage);
+  }
   @Get('search/:key')
   getMessagesByKey(@Param('key') key: string) {
     return this.messageService.getMessagesByKey(key);
   }
-  @Get('/ofConv/:idConv/:limit')
-  findMessageOfConv(
-    @Param('idConv') idConv: string,
-    @Param('limit') limit: number,
-  ) {
-    return this.messageService.findMessageOfConv(idConv, limit);
+  @Get('/ofConv/:idConv')
+  findMessageOfConv(@Param('idConv') idConv: string) {
+    return this.messageService.findMessageOfConv(idConv);
   }
 
   @Patch(':id')

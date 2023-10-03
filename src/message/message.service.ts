@@ -35,39 +35,66 @@ export class MessageService {
       const user = await this.userService.findeUserForMessage(msg.sender);
       msg.sender = user;
     }
+
     return msgs;
   }
-  async findMessageOfConv(idConv: string, skip: number) {
-    console.log('skip', skip);
-
+  async getMessageSearchedGroup(idConv: string, idMessage: string) {
+    let range = await this.getRange(idConv, idMessage);
+    let messages = [];
     const totalCount = await this.messageModel.countDocuments({ conv: idConv });
-    console.log('totalCount', totalCount);
     let limit: number = 20;
-    if (totalCount - skip < 20) {
-      limit = totalCount - skip;
-      if (limit < 0) return [];
-    }
-    let msgs: any;
-    if (limit === 0) {
-      msgs = await this.messageModel.find({ conv: idConv });
-      return msgs;
+    if (totalCount < 20) {
+      messages = await this.messageModel.find({ conv: idConv });
     } else {
-      msgs = await this.messageModel
+      if (range < 20) {
+        range = 0;
+      } else if (totalCount - range < 20) {
+        limit = totalCount - range;
+      } else {
+        range -= 10;
+        limit = 20;
+      }
+    }
+    messages = await this.messageModel
+      .find({ conv: idConv })
+      .skip(range)
+      .limit(limit)
+      .exec();
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const user = await this.userService.findeUserForMessage(msg.sender);
+      msg.sender = user;
+    }
+    return messages;
+  }
+  async findMessageOfConv(idConv: string) {
+    const total = await this.messageModel.countDocuments({ conv: idConv });
+    const limit = 20;
+    const skip = total - limit;
+    let messages = [];
+    if (total < 20) {
+      messages = await this.messageModel.find({ conv: idConv }).exec();
+    } else {
+      messages = await this.messageModel
         .find({ conv: idConv })
         .skip(skip)
         .limit(limit)
-        .sort({ _id: -1 })
         .exec();
-
-      for (let i = 0; i < msgs.length; i++) {
-        const msg = msgs[i];
-        const user = await this.userService.findeUserForMessage(msg.sender);
-        msg.sender = user;
-      }
     }
-    console.log('msgs', msgs.length);
 
-    return msgs.reverse();
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const user = await this.userService.findeUserForMessage(msg.sender);
+      msg.sender = user;
+    }
+
+    return messages;
+  }
+  async getRange(idConv: string, idMessage: string) {
+    const all = await this.messageModel.find({ conv: idConv }).exec();
+    const index = all.findIndex((msg) => msg._id == idMessage);
+    return index;
   }
   async getMessagesByKey(key: string) {
     const messages = await this.messageModel
@@ -85,6 +112,52 @@ export class MessageService {
   }
   findOne(id: string) {
     return this.findOne(id).exec();
+  }
+  async appendDown(idConv: string, idMessage: string) {
+    let range = await this.getRange(idConv, idMessage);
+    console.log(range);
+    let limit: number = 20;
+    const totalCount = await this.messageModel.countDocuments({ conv: idConv });
+    if (totalCount - range < 20) {
+      range++;
+      limit = totalCount - range;
+      // limit = range++;
+    }
+
+    const messages = await this.messageModel
+      .find({ conv: idConv })
+      .skip(range)
+      .limit(limit)
+      .exec();
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const user = await this.userService.findeUserForMessage(msg.sender);
+      msg.sender = user;
+    }
+
+    return messages;
+  }
+  async appendUp(idConv: string, idMessage: string) {
+    let range = await this.getRange(idConv, idMessage);
+    if (range == 0) return [];
+    let limit: number = 20;
+    if (range < 20) {
+      limit = range;
+      range = 0;
+    }
+
+    const messages = await this.messageModel
+      .find({ conv: idConv })
+      .skip(range)
+      .limit(limit)
+      .exec();
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const user = await this.userService.findeUserForMessage(msg.sender);
+      msg.sender = user;
+    }
+
+    return messages;
   }
 
   update(id: string, updateMessageDto: UpdateMessageDto) {

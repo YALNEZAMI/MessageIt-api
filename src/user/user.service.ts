@@ -6,9 +6,7 @@ import { User, UserDocument } from './entities/user.entity';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
-import { env } from 'src/env';
-// import * as path from 'path';
-// import { env } from 'src/env';
+
 @Injectable()
 export class UserService {
   constructor(
@@ -36,7 +34,7 @@ export class UserService {
       }
       createUserDto.status = 'online';
       createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
-      createUserDto.photo = env.api_url + '/user/uploads/user.png';
+      createUserDto.photo = process.env.api_url + '/user/uploads/user.png';
       const user = await this.UserModel.create(createUserDto);
       delete user.password;
       user.password = '';
@@ -229,7 +227,7 @@ export class UserService {
         // Handle the case where the file exists
       }
     });
-    const photoName = env.api_url + '/user/uploads/' + file.filename;
+    const photoName = process.env.api_url + '/user/uploads/' + file.filename;
     await this.UserModel.updateOne({ _id: id }, { photo: photoName });
     return { photo: photoName };
   }

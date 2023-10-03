@@ -1,8 +1,3 @@
-// import { Injectable } from '@nestjs/common';
-// import { CreateWebSocketDto } from './dto/create-web-socket.dto';
-// import { UpdateWebSocketDto } from './dto/update-web-socket.dto';
-import { env } from '../env';
-// import { OnModuleInit } from '@nestjs/common';
 import {
   MessageBody,
   SubscribeMessage,
@@ -10,9 +5,11 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
+import { config } from 'dotenv';
+config();
 @WebSocketGateway({
   cors: {
-    origin: [env.frontUrl], // Adjust the origin to match your Angular app's URL
+    origin: [process.env.frontUrl], // Adjust the origin to match your Angular app's URL
   },
 })
 export class WebSocketsService {
