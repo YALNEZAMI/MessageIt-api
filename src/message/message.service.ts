@@ -17,6 +17,10 @@ export class MessageService {
     private webSocketService: WebSocketsService,
   ) {}
   async create(createMessageDto: CreateMessageDto) {
+    //set the user online
+    await this.userService.setStatus(createMessageDto.sender, {
+      status: 'online',
+    });
     if (createMessageDto.text === '') {
       return;
     }

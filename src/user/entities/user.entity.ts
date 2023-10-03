@@ -29,6 +29,8 @@ export class User {
   @Prop({ required: true })
   status: string;
   @Prop({ required: false })
+  lastConnection: Date;
+  @Prop({ required: false })
   codePassword: number;
 }
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -12,4 +12,5 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   friends?: string[];
   status?: string;
   codePassword?: number;
+  lastConnection?: Date;
 }

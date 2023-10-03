@@ -33,7 +33,8 @@ export class UserService {
       if (await this.userAlreadyExist(createUserDto.email)) {
         return { status: 501, message: 'User already exist' };
       }
-      createUserDto.status = 'online';
+      createUserDto.status = 'offline';
+      createUserDto.lastConnection = new Date();
       createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
       createUserDto.photo = process.env.api_url + '/user/uploads/user.png';
       const user = await this.UserModel.create(createUserDto);
@@ -183,12 +184,28 @@ export class UserService {
       return user;
     }
   }
-  async setStatus(id: string, object: { status: string }) {
+  async setStatus(id: string, object: any) {
+    setTimeout(async () => {
+      const user = await this.UserModel.findOne({ _id: id }).exec();
+      const lastConnection: any = user.lastConnection;
+      const now: any = new Date();
+      const diff = now - lastConnection;
+      if (diff > 300000) {
+        await this.UserModel.updateOne(
+          { _id: id },
+          { status: 'offline' },
+        ).exec();
+      }
+    }, 305000);
+    object.lastConnection = new Date();
     await this.UserModel.updateOne({ _id: id }, object).exec();
-    return this.UserModel.findOne(
+    const res = await this.UserModel.findOne(
       { _id: id },
       { password: 0, email: 0, codePassword: 0 },
     ).exec();
+    console.log(res);
+
+    return res;
   }
   async resetPassword(updateUserDto: UpdateUserDto) {
     updateUserDto.email = updateUserDto.email.toLowerCase();
@@ -220,7 +237,6 @@ export class UserService {
     let oldPhoto = user.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
     oldPhoto = nameOldPhotoSplit[nameOldPhotoSplit.length - 1];
-    console.log(oldPhoto);
     if (oldPhoto !== process.env.defaultUserPhoto) {
       fs.access(
         'assets/imagesOfConvs/' + oldPhoto,
@@ -249,7 +265,6 @@ export class UserService {
     let oldPhoto = user.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
     oldPhoto = nameOldPhotoSplit[nameOldPhotoSplit.length - 1];
-    console.log(oldPhoto);
 
     fs.access('assets/imagesOfConvs/' + oldPhoto, fs.constants.F_OK, (err) => {
       if (err) {

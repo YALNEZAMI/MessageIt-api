@@ -154,6 +154,8 @@ export class ConvService {
    * @returns  all conversations of the user with the name and the image
    */
   async getMyConvs(id: string) {
+    //set the user online
+    await this.userService.setStatus(id, { status: 'online' });
     //get all conversations of the user
     const myConvs = await this.convOfUser(id);
 

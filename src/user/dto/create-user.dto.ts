@@ -21,4 +21,6 @@ export class CreateUserDto {
   friends: string[];
   @Column()
   status: string;
+  @Column()
+  lastConnection: Date;
 }
