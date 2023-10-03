@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { CreateConvDto } from './dto/create-conv.dto';
 import { UpdateConvDto } from './dto/update-conv.dto';
@@ -325,35 +326,6 @@ export class ConvService {
         }
       }
     }
-    //set the conv image
-    // if (conv.photo == undefined) {
-    //   if (members.length > 2) {
-    //     conv.photo = 'assets/images/group.png';
-    //   } else if (members.length == 1) {
-    //     const me = await this.userService.findOne(members[0]);
-    //     if (me.photo == undefined) {
-    //       conv.photo = 'assets/images/user.png';
-    //     } else {
-    //       conv.photo = me.photo;
-    //     }
-    //   } else {
-    //     if (members[0] == id) {
-    //       const friend = await this.userService.findOne(members[1]);
-    //       if (friend.photo == undefined) {
-    //         conv.photo = 'assets/images/user.png';
-    //       } else {
-    //         conv.photo = friend.photo;
-    //       }
-    //     } else {
-    //       const friend = await this.userService.findOne(members[0]);
-    //       if (friend.photo == undefined) {
-    //         conv.photo = 'assets/images/user.png';
-    //       } else {
-    //         conv.photo = friend.photo;
-    //       }
-    //     }
-    //   }
-    // }
 
     return conv;
   }
@@ -397,6 +369,7 @@ export class ConvService {
     await this.ConvModel.updateOne({ _id: id }, { photo: photoName });
     return { photo: photoName };
   }
+
   /**
    *
    * @param id the id of the conversation

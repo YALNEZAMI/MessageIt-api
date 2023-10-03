@@ -15,6 +15,8 @@ export class Message {
   ref: string;
   @Prop({ required: false })
   invisiblity: string[];
+  @Prop({ required: true })
+  vus: string[];
   @Prop({ required: true, type: Object })
   sender: any;
 }

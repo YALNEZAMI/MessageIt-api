@@ -17,5 +17,8 @@ export class CreateMessageDto {
   @Column()
   invisiblity: string[];
   @Column()
+  vus: string[];
+
+  @Column()
   sender: string;
 }

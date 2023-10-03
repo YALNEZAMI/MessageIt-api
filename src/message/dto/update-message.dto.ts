@@ -9,4 +9,5 @@ export class UpdateMessageDto extends PartialType(CreateMessageDto) {
   ref?: string;
   invisiblity?: string[];
   sender?: string;
+  vus?: string[];
 }

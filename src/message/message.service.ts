@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -115,13 +116,11 @@ export class MessageService {
   }
   async appendDown(idConv: string, idMessage: string) {
     let range = await this.getRange(idConv, idMessage);
-    console.log(range);
     let limit: number = 20;
     const totalCount = await this.messageModel.countDocuments({ conv: idConv });
     if (totalCount - range < 20) {
       range++;
       limit = totalCount - range;
-      // limit = range++;
     }
 
     const messages = await this.messageModel
@@ -137,6 +136,7 @@ export class MessageService {
 
     return messages;
   }
+
   async appendUp(idConv: string, idMessage: string) {
     let range = await this.getRange(idConv, idMessage);
     if (range == 0) return [];
@@ -163,6 +163,14 @@ export class MessageService {
   update(id: string, updateMessageDto: UpdateMessageDto) {
     return this.messageModel.updateOne({ _id: id }, updateMessageDto).exec();
   }
+  async setVus(body: any) {
+    const id = body.myId;
+    const idConv = body.idConv;
+    this.messageModel
+      .updateMany({ conv: idConv }, { $addToSet: { vus: id } })
+      .exec();
+  }
+
   remove(id: string): any {
     return this.messageModel.deleteMany({ _id: id }).exec();
   }

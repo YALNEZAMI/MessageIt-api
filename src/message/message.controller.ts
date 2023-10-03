@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   Controller,
   Get,
@@ -72,7 +73,10 @@ export class MessageController {
   update(@Param('id') id: string, @Body() updateMessageDto: UpdateMessageDto) {
     return this.messageService.update(id, updateMessageDto);
   }
-
+  @Patch('/set/vus')
+  setVus(@Body() body: any) {
+    return this.messageService.setVus(body);
+  }
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.messageService.remove(id);

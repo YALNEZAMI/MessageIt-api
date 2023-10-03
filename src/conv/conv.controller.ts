@@ -61,6 +61,7 @@ export class ConvController {
   update(@Param('id') id: string, @Body() updateConvDto: UpdateConvDto) {
     return this.convService.update(id, updateConvDto);
   }
+
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
