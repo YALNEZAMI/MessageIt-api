@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   Controller,
   Get,
@@ -29,12 +30,13 @@ export class MessageController {
   findOne(@Param('id') id: string) {
     return this.messageService.findOne(id);
   }
-  @Get('/ofConv/:idConv/:limit')
+  @Get('/ofConv/:idConv/:limit/:userId')
   findMessageOfConv(
     @Param('idConv') idConv: string,
     @Param('limit') limit: number,
+    @Param('userId') userId: string,
   ) {
-    return this.messageService.findMessageOfConv(idConv, limit);
+    return this.messageService.findMessageOfConv(idConv, limit, userId);
   }
 
   @Patch(':id')
@@ -43,8 +45,15 @@ export class MessageController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string): any {
     return this.messageService.remove(id);
+  }
+  @Delete('deleteForMe/:id/:memberLength')
+  deleteForMe(
+    @Param('id') id: string,
+    @Param('memberLength') memberLength: number,
+  ) {
+    return this.messageService.deleteForMe(id, memberLength);
   }
   @Delete('/all/all')
   removeAll() {

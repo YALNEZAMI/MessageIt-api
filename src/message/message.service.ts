@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -13,7 +14,7 @@ export class MessageService {
     @InjectModel(Message.name)
     private messageModel: Model<MessageDocument>,
     private userService: UserService,
-    private webSocketService: WebSocketsService,
+    private webSocketService: WebSocketsService, // private convService: ConvService,
   ) {}
   async create(createMessageDto: CreateMessageDto) {
     if (createMessageDto.text === '') {
@@ -37,14 +38,14 @@ export class MessageService {
     }
     return msgs;
   }
-  async findMessageOfConv(idConv: string, limit: number) {
+  async findMessageOfConv(idConv: string, limit: number, userId: string) {
     let msgs: any;
     if (limit === 0) {
       msgs = await this.messageModel.find({ conv: idConv });
       return msgs;
     } else {
       msgs = await this.messageModel
-        .find({ conv: idConv })
+        .find({ conv: idConv, invisiblity: { $nin: [userId] } })
         .skip(limit)
         .limit(20)
         .sort({ _id: -1 })
@@ -70,6 +71,23 @@ export class MessageService {
   async remove(id: string): Promise<any> {
     this.webSocketService.onMessageDeleted(id);
     return this.messageModel.deleteMany({ _id: id }).exec();
+  }
+  async deleteForMe(id: string, memberLength: number): Promise<any> {
+    console.log(id, memberLength);
+
+    this.webSocketService.onMessageDeleted(id);
+    const msg = await this.messageModel.findOne({ _id: id }).exec();
+    if (msg.invisiblity.length + 1 == memberLength) {
+      return this.messageModel.deleteMany({ _id: id }).exec();
+    }
+    return this.messageModel
+      .updateOne(
+        { _id: id },
+        {
+          $addToSet: { invisiblity: id },
+        },
+      )
+      .exec();
   }
   removeAll(): any {
     return this.messageModel.deleteMany().exec();

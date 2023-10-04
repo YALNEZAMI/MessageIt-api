@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { CreateConvDto } from './dto/create-conv.dto';
 import { UpdateConvDto } from './dto/update-conv.dto';
