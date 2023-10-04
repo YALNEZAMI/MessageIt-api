@@ -14,7 +14,7 @@ export class MessageService {
     @InjectModel(Message.name)
     private messageModel: Model<MessageDocument>,
     private userService: UserService,
-    private webSocketService: WebSocketsService,
+    private webSocketService: WebSocketsService, // private convService: ConvService,
   ) {}
   async create(createMessageDto: CreateMessageDto) {
     //set the user online
@@ -43,6 +43,7 @@ export class MessageService {
 
     return msgs;
   }
+<<<<<<< HEAD
   async getMessageSearchedGroup(idConv: string, idMessage: string) {
     let range = await this.getRange(idConv, idMessage);
     let messages = [];
@@ -58,6 +59,25 @@ export class MessageService {
       } else {
         range -= 10;
         limit = 20;
+=======
+  async findMessageOfConv(idConv: string, limit: number, userId: string) {
+    let msgs: any;
+    if (limit === 0) {
+      msgs = await this.messageModel.find({ conv: idConv });
+      return msgs;
+    } else {
+      msgs = await this.messageModel
+        .find({ conv: idConv, invisiblity: { $nin: [userId] } })
+        .skip(limit)
+        .limit(20)
+        .sort({ _id: -1 })
+        .exec();
+
+      for (let i = 0; i < msgs.length; i++) {
+        const msg = msgs[i];
+        const user = await this.userService.findeUserForMessage(msg.sender);
+        msg.sender = user;
+>>>>>>> messageDelete
       }
     }
     messages = await this.messageModel
@@ -179,6 +199,23 @@ export class MessageService {
   remove(id: string): any {
     this.webSocketService.onMessageDeleted(id);
     return this.messageModel.deleteMany({ _id: id }).exec();
+  }
+  async deleteForMe(id: string, memberLength: number): Promise<any> {
+    console.log(id, memberLength);
+
+    this.webSocketService.onMessageDeleted(id);
+    const msg = await this.messageModel.findOne({ _id: id }).exec();
+    if (msg.invisiblity.length + 1 == memberLength) {
+      return this.messageModel.deleteMany({ _id: id }).exec();
+    }
+    return this.messageModel
+      .updateOne(
+        { _id: id },
+        {
+          $addToSet: { invisiblity: id },
+        },
+      )
+      .exec();
   }
   removeAll(): any {
     return this.messageModel.deleteMany().exec();

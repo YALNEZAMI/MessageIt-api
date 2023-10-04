@@ -5,10 +5,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Message, MessageSchema } from './entities/message.entity';
 import { UserModule } from 'src/user/user.module';
 import { WebSocketsModule } from 'src/web-sockets/web-sockets.module';
+// import { ConvModule } from 'src/conv/conv.module';
 
 @Module({
   exports: [MessageService],
   imports: [
+    // ConvModule,
     WebSocketsModule,
     UserModule,
     MongooseModule.forFeature([

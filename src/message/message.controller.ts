@@ -30,6 +30,7 @@ export class MessageController {
   findOne(@Param('id') id: string) {
     return this.messageService.findOne(id);
   }
+<<<<<<< HEAD
   @Get('range/:idConv/:idMessage')
   getRange(
     @Param('idConv') idConv: string,
@@ -67,6 +68,15 @@ export class MessageController {
   @Get('/ofConv/:idConv')
   findMessageOfConv(@Param('idConv') idConv: string) {
     return this.messageService.findMessageOfConv(idConv);
+=======
+  @Get('/ofConv/:idConv/:limit/:userId')
+  findMessageOfConv(
+    @Param('idConv') idConv: string,
+    @Param('limit') limit: number,
+    @Param('userId') userId: string,
+  ) {
+    return this.messageService.findMessageOfConv(idConv, limit, userId);
+>>>>>>> messageDelete
   }
 
   @Patch(':id')
@@ -78,8 +88,15 @@ export class MessageController {
     return this.messageService.setVus(body);
   }
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string): any {
     return this.messageService.remove(id);
+  }
+  @Delete('deleteForMe/:id/:memberLength')
+  deleteForMe(
+    @Param('id') id: string,
+    @Param('memberLength') memberLength: number,
+  ) {
+    return this.messageService.deleteForMe(id, memberLength);
   }
   @Delete('/all/all')
   removeAll() {
