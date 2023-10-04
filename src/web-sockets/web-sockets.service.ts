@@ -32,22 +32,8 @@ export class WebSocketsService {
   onSetVus(@MessageBody() body: any) {
     this.server.emit('setVus', body);
   }
-  // create(createWebSocketDto: CreateWebSocketDto) {
-  //   return 'This action adds a new webSocket';
-  // }
-  // findAll() {
-  //   return `This action returns all webSockets`;
-  // }
-  // findOne(id: number) {
-  //   return `This action returns a #${id} webSocket`;
-  // }
-  // update(id: number, updateWebSocketDto: UpdateWebSocketDto) {
-  //   return `This action updates a #${id} webSocket`;
-  // }
-  // remove(id: number) {
-  //   return `This action removes a #${id} webSocket`;
-  // }
-  @SubscribeMessage('newMessage')
+
+  @SubscribeMessage('messageDeleted')
   onMessageDeleted(@MessageBody() id: any) {
     this.server.emit('messageDeleted', id);
   }
