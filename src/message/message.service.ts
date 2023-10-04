@@ -177,6 +177,7 @@ export class MessageService {
   }
 
   remove(id: string): any {
+    this.webSocketService.onMessageDeleted(id);
     return this.messageModel.deleteMany({ _id: id }).exec();
   }
   removeAll(): any {
