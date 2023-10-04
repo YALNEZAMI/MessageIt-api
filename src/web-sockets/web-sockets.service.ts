@@ -46,4 +46,8 @@ export class WebSocketsService {
   // remove(id: number) {
   //   return `This action removes a #${id} webSocket`;
   // }
+  @SubscribeMessage('newMessage')
+  onMessageDeleted(@MessageBody() id: any) {
+    this.server.emit('messageDeleted', id);
+  }
 }

@@ -67,7 +67,8 @@ export class MessageService {
   update(id: string, updateMessageDto: UpdateMessageDto) {
     return this.messageModel.updateOne({ _id: id }, updateMessageDto).exec();
   }
-  remove(id: string): any {
+  async remove(id: string): Promise<any> {
+    this.webSocketService.onMessageDeleted(id);
     return this.messageModel.deleteMany({ _id: id }).exec();
   }
   removeAll(): any {
