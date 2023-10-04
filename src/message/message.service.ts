@@ -43,13 +43,39 @@ export class MessageService {
 
     return msgs;
   }
-  async getMessageSearchedGroup(idConv: string, idMessage: string) {
-    let range = await this.getRange(idConv, idMessage);
+  async deleteForMe(object: any): Promise<any> {
+    //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
+    object.operation = 'deleteForMe';
+    this.webSocketService.onMessageDeleted(object);
+    const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
+    if (msg.invisiblity.length + 1 == object.memberLength) {
+      return this.messageModel.deleteMany({ _id: object.idMsg }).exec();
+    }
+    return this.messageModel
+      .updateOne(
+        { _id: object.idMsg },
+        {
+          $addToSet: { invisiblity: object.idUser },
+        },
+      )
+      .exec();
+  }
+  async getMessageSearchedGroup(
+    idConv: string,
+    idMessage: string,
+    userId: string,
+  ) {
+    let range = await this.getRange(idConv, idMessage, userId);
     let messages = [];
-    const totalCount = await this.messageModel.countDocuments({ conv: idConv });
+    const totalCount = await this.messageModel.countDocuments({
+      conv: idConv,
+      invisiblity: { $nin: [userId] },
+    });
     let limit: number = 20;
     if (totalCount < 20) {
-      messages = await this.messageModel.find({ conv: idConv });
+      messages = await this.messageModel
+        .find({ conv: idConv, invisibility: { $nin: [userId] } })
+        .exec();
     } else {
       if (range < 20) {
         range = 0;
@@ -59,12 +85,12 @@ export class MessageService {
         range -= 10;
         limit = 20;
       }
+      messages = await this.messageModel
+        .find({ conv: idConv })
+        .skip(range)
+        .limit(limit)
+        .exec();
     }
-    messages = await this.messageModel
-      .find({ conv: idConv })
-      .skip(range)
-      .limit(limit)
-      .exec();
 
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
@@ -73,16 +99,21 @@ export class MessageService {
     }
     return messages;
   }
-  async findMessageOfConv(idConv: string) {
-    const total = await this.messageModel.countDocuments({ conv: idConv });
+  async findMessageOfConv(idConv: string, idUser: string) {
+    const total = await this.messageModel.countDocuments({
+      conv: idConv,
+      invisiblity: { $nin: [idUser] },
+    });
     const limit = 20;
     const skip = total - limit;
     let messages = [];
     if (total < 20) {
-      messages = await this.messageModel.find({ conv: idConv }).exec();
+      messages = await this.messageModel
+        .find({ conv: idConv, invisiblity: { $nin: [idUser] } })
+        .exec();
     } else {
       messages = await this.messageModel
-        .find({ conv: idConv })
+        .find({ conv: idConv, invisiblity: { $nin: [idUser] } })
         .skip(skip)
         .limit(limit)
         .exec();
@@ -96,14 +127,18 @@ export class MessageService {
 
     return messages;
   }
-  async getRange(idConv: string, idMessage: string) {
-    const all = await this.messageModel.find({ conv: idConv }).exec();
+  async getRange(idConv: string, idMessage: string, userId?: string) {
+    const all = await this.messageModel
+      .find({ conv: idConv, invisiblity: { $nin: [userId] } })
+      .exec();
     const index = all.findIndex((msg) => msg._id == idMessage);
     return index;
   }
-  async getMessagesByKey(key: string) {
+  async getMessagesByKey(key: string, idConv: string, idUser: string) {
     const messages = await this.messageModel
       .find({
+        conv: idConv,
+        invisiblity: { $nin: [idUser] },
         text: { $regex: key, $options: 'i' },
       })
       .exec();
@@ -118,17 +153,20 @@ export class MessageService {
   findOne(id: string) {
     return this.findOne(id).exec();
   }
-  async appendDown(idConv: string, idMessage: string) {
-    let range = await this.getRange(idConv, idMessage);
+  async appendDown(idConv: string, idMessage: string, userId: string) {
+    let range = await this.getRange(idConv, idMessage, userId);
     let limit: number = 20;
-    const totalCount = await this.messageModel.countDocuments({ conv: idConv });
+    const totalCount = await this.messageModel.countDocuments({
+      conv: idConv,
+      invisiblity: { $nin: [userId] },
+    });
     if (totalCount - range < 20) {
       range++;
       limit = totalCount - range;
     }
 
     const messages = await this.messageModel
-      .find({ conv: idConv })
+      .find({ conv: idConv, invisiblity: { $nin: [userId] } })
       .skip(range)
       .limit(limit)
       .exec();
@@ -141,8 +179,8 @@ export class MessageService {
     return messages;
   }
 
-  async appendUp(idConv: string, idMessage: string) {
-    let range = await this.getRange(idConv, idMessage);
+  async appendUp(idConv: string, idMessage: string, userId: string) {
+    let range = await this.getRange(idConv, idMessage, userId);
     if (range == 0) return [];
     let limit: number = 20;
     if (range < 20) {
@@ -151,7 +189,7 @@ export class MessageService {
     }
 
     const messages = await this.messageModel
-      .find({ conv: idConv })
+      .find({ conv: idConv, invisiblity: { $nin: [userId] } })
       .skip(range)
       .limit(limit)
       .exec();
@@ -176,9 +214,18 @@ export class MessageService {
       .exec();
   }
 
-  remove(id: string): any {
-    this.webSocketService.onMessageDeleted(id);
-    return this.messageModel.deleteMany({ _id: id }).exec();
+  async remove(id: string): Promise<any> {
+    const msg = await this.messageModel.findOne({ _id: id }).exec();
+    await this.messageModel.deleteMany({ _id: id }).exec();
+    //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
+
+    const obj = {
+      idMsg: msg._id,
+      idUser: msg.sender,
+      operation: 'deleteForAll',
+    };
+    this.webSocketService.onMessageDeleted(obj);
+    return obj;
   }
   removeAll(): any {
     return this.messageModel.deleteMany().exec();

@@ -38,35 +38,49 @@ export class MessageController {
     return this.messageService.getRange(idConv, idMessage);
   }
   //MessageSearchedGroup/${idConv}/${range}
-  @Get('MessageSearchedGroup/:idConv/:idMessage')
+  @Get('MessageSearchedGroup/:idConv/:idMessage/:userId')
   getMessageSearchedGroup(
     @Param('idConv') idConv: string,
     @Param('idMessage') idMessage: string,
+    @Param('userId') userId: string,
   ) {
-    return this.messageService.getMessageSearchedGroup(idConv, idMessage);
+    return this.messageService.getMessageSearchedGroup(
+      idConv,
+      idMessage,
+      userId,
+    );
   }
   ///appendDown/${idConv}/${range}
-  @Get('appendDown/:idConv/:idMessage')
+  @Get('appendDown/:idConv/:idMessage/:userId')
   appendDown(
     @Param('idConv') idConv: string,
     @Param('idMessage') idMessage: string,
+    @Param('userId') userId: string,
   ) {
-    return this.messageService.appendDown(idConv, idMessage);
+    return this.messageService.appendDown(idConv, idMessage, userId);
   }
-  @Get('appendUp/:idConv/:idMessage')
+  @Get('appendUp/:idConv/:idMessage/:userId')
   appendUp(
     @Param('idConv') idConv: string,
     @Param('idMessage') idMessage: string,
+    @Param('userId') userId: string,
   ) {
-    return this.messageService.appendUp(idConv, idMessage);
+    return this.messageService.appendUp(idConv, idMessage, userId);
   }
-  @Get('search/:key')
-  getMessagesByKey(@Param('key') key: string) {
-    return this.messageService.getMessagesByKey(key);
+  @Get('search/:key/:idConv/:idUser')
+  getMessagesByKey(
+    @Param('key') key: string,
+    @Param('idConv') idConv: string,
+    @Param('idUser') idUser: string,
+  ) {
+    return this.messageService.getMessagesByKey(key, idConv, idUser);
   }
-  @Get('/ofConv/:idConv')
-  findMessageOfConv(@Param('idConv') idConv: string) {
-    return this.messageService.findMessageOfConv(idConv);
+  @Get('/ofConv/:idConv/:idUser')
+  findMessageOfConv(
+    @Param('idConv') idConv: string,
+    @Param('idUser') idUser: string,
+  ) {
+    return this.messageService.findMessageOfConv(idConv, idUser);
   }
 
   @Patch(':id')
@@ -80,6 +94,11 @@ export class MessageController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.messageService.remove(id);
+  }
+  @Patch('delete/ForMe')
+  deleteForMe(@Body() object: any) {
+    //object:{idMsg:string,idUser:string,memberLength:number}
+    return this.messageService.deleteForMe(object);
   }
   @Delete('/all/all')
   removeAll() {
