@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   MessageBody,
   SubscribeMessage,
@@ -27,20 +28,8 @@ export class WebSocketsService {
   onNewMessage(@MessageBody() body: any) {
     this.server.emit('newMessage', body);
   }
-
-  // create(createWebSocketDto: CreateWebSocketDto) {
-  //   return 'This action adds a new webSocket';
-  // }
-  // findAll() {
-  //   return `This action returns all webSockets`;
-  // }
-  // findOne(id: number) {
-  //   return `This action returns a #${id} webSocket`;
-  // }
-  // update(id: number, updateWebSocketDto: UpdateWebSocketDto) {
-  //   return `This action updates a #${id} webSocket`;
-  // }
-  // remove(id: number) {
-  //   return `This action removes a #${id} webSocket`;
-  // }
+  @SubscribeMessage('setVus')
+  onSetVus(@MessageBody() body: any) {
+    this.server.emit('setVus', body);
+  }
 }

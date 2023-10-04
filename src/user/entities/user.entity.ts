@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
 import { IsEmail } from 'class-validator';
 import { Document } from 'mongoose';

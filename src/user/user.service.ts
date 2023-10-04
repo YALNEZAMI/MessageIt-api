@@ -203,7 +203,6 @@ export class UserService {
       { _id: id },
       { password: 0, email: 0, codePassword: 0 },
     ).exec();
-    console.log(res);
 
     return res;
   }

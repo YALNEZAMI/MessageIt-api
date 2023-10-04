@@ -168,6 +168,7 @@ export class MessageService {
     return this.messageModel.updateOne({ _id: id }, updateMessageDto).exec();
   }
   async setVus(body: any) {
+    this.webSocketService.onSetVus(body);
     const id = body.myId;
     const idConv = body.idConv;
     this.messageModel
