@@ -1,4 +1,7 @@
 /* eslint-disable prettier/prettier */
+/**
+ * interface of uploaded photos
+ */
 export interface UploadedFileInterface {
   fieldname: string;
   originalname: string;
