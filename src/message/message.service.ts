@@ -17,6 +17,17 @@ export class MessageService {
     private webSocketService: WebSocketsService,
   ) {}
   async create(createMessageDto: CreateMessageDto) {
+    //setvisibility
+    createMessageDto.visiblity = [];
+    for (let i = 0; i < createMessageDto.conv.members.length; i++) {
+      const member = createMessageDto.conv.members[i];
+      createMessageDto.visiblity.push(member._id);
+    }
+    //when we finish setting visibility, conv become a simple con _id
+    createMessageDto.conv = createMessageDto.conv._id;
+    //the sender is set to a viewer of his message here
+    createMessageDto.vus = [];
+    createMessageDto.vus.push(createMessageDto.sender);
     //set the user online
     await this.userService.setStatus(createMessageDto.sender, {
       status: 'online',
@@ -24,6 +35,7 @@ export class MessageService {
     if (createMessageDto.text === '') {
       return;
     }
+
     const msg = await this.messageModel.create(createMessageDto);
     msg.sender = await this.userService.findeUserForMessage(msg.sender);
     this.webSocketService.onNewMessage(msg);
@@ -48,14 +60,14 @@ export class MessageService {
     object.operation = 'deleteForMe';
     this.webSocketService.onMessageDeleted(object);
     const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
-    if (msg.invisiblity.length + 1 == object.memberLength) {
+    if (msg.visiblity.length == 1) {
       return this.messageModel.deleteMany({ _id: object.idMsg }).exec();
     }
     return this.messageModel
       .updateOne(
         { _id: object.idMsg },
         {
-          $addToSet: { invisiblity: object.idUser },
+          $pull: { visiblity: object.idUser },
         },
       )
       .exec();
@@ -69,12 +81,12 @@ export class MessageService {
     let messages = [];
     const totalCount = await this.messageModel.countDocuments({
       conv: idConv,
-      invisiblity: { $nin: [userId] },
+      visiblity: { $in: [userId] },
     });
     let limit: number = 20;
     if (totalCount < 20) {
       messages = await this.messageModel
-        .find({ conv: idConv, invisibility: { $nin: [userId] } })
+        .find({ conv: idConv, visibility: { $in: [userId] } })
         .exec();
     } else {
       if (range < 20) {
@@ -92,61 +104,72 @@ export class MessageService {
         .exec();
     }
 
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
     return messages;
   }
   async findMessageOfConv(idConv: string, idUser: string) {
     const total = await this.messageModel.countDocuments({
       conv: idConv,
-      invisiblity: { $nin: [idUser] },
+      visiblity: { $in: [idUser] },
     });
+    console.log(total);
+
     const limit = 20;
     const skip = total - limit;
     let messages = [];
     if (total < 20) {
       messages = await this.messageModel
-        .find({ conv: idConv, invisiblity: { $nin: [idUser] } })
+        .find({ conv: idConv, visiblity: { $in: [idUser] } })
         .exec();
     } else {
       messages = await this.messageModel
-        .find({ conv: idConv, invisiblity: { $nin: [idUser] } })
+        .find({ conv: idConv, visiblity: { $in: [idUser] } })
         .skip(skip)
         .limit(limit)
         .exec();
     }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
 
+    return messages;
+  }
+  async fillSenderAndRef(messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
       const user = await this.userService.findeUserForMessage(msg.sender);
       msg.sender = user;
+      if (msg.ref != '') {
+        const repMsg = await this.messageModel.findById(msg.ref);
+        msg.ref = repMsg;
+        const senderRef = await this.userService.findeUserForMessage(
+          msg.ref.sender,
+        );
+        msg.ref.sender = senderRef;
+      }
     }
-
     return messages;
   }
   async getRange(idConv: string, idMessage: string, userId?: string) {
     const all = await this.messageModel
-      .find({ conv: idConv, invisiblity: { $nin: [userId] } })
+      .find({ conv: idConv, visiblity: { $in: [userId] } })
       .exec();
     const index = all.findIndex((msg) => msg._id == idMessage);
     return index;
   }
   async getMessagesByKey(key: string, idConv: string, idUser: string) {
-    const messages = await this.messageModel
+    let messages = await this.messageModel
       .find({
         conv: idConv,
-        invisiblity: { $nin: [idUser] },
+        visiblity: { $in: [idUser] },
         text: { $regex: key, $options: 'i' },
       })
       .exec();
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
 
     return messages;
   }
@@ -158,23 +181,21 @@ export class MessageService {
     let limit: number = 20;
     const totalCount = await this.messageModel.countDocuments({
       conv: idConv,
-      invisiblity: { $nin: [userId] },
+      visiblity: { $in: [userId] },
     });
     if (totalCount - range < 20) {
       range++;
       limit = totalCount - range;
     }
 
-    const messages = await this.messageModel
-      .find({ conv: idConv, invisiblity: { $nin: [userId] } })
+    let messages = await this.messageModel
+      .find({ conv: idConv, visiblity: { $in: [userId] } })
       .skip(range)
       .limit(limit)
       .exec();
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
 
     return messages;
   }
@@ -188,16 +209,14 @@ export class MessageService {
       range = 0;
     }
 
-    const messages = await this.messageModel
-      .find({ conv: idConv, invisiblity: { $nin: [userId] } })
+    let messages = await this.messageModel
+      .find({ conv: idConv, visiblity: { $in: [userId] } })
       .skip(range)
       .limit(limit)
       .exec();
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
 
     return messages;
   }

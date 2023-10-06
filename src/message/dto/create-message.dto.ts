@@ -6,7 +6,7 @@ export class CreateMessageDto {
   @PrimaryGeneratedColumn()
   _id: string;
   @Column()
-  conv: string;
+  conv: any;
   @Column()
   text: string;
   @Column()
@@ -16,7 +16,7 @@ export class CreateMessageDto {
   @Column()
   ref: string;
   @Column()
-  invisiblity: string[];
+  visiblity: string[];
   @Column()
   vus: string[];
 

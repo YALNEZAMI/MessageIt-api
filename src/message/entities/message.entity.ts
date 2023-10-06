@@ -4,8 +4,8 @@ import { Document } from 'mongoose';
 
 @Schema()
 export class Message {
-  @Prop({ required: true })
-  conv: string;
+  @Prop({ required: true, type: Object })
+  conv: any;
   @Prop({ required: false })
   text: string;
   @Prop({ required: false })
@@ -15,7 +15,7 @@ export class Message {
   @Prop({ required: false, type: Object })
   ref: any;
   @Prop({ required: false })
-  invisiblity: string[];
+  visiblity: string[];
   @Prop({ required: true })
   vus: string[];
   @Prop({ required: true, type: Object })
