@@ -12,8 +12,8 @@ export class Message {
   files: any[];
   @Prop({ required: true })
   date: Date;
-  @Prop({ required: false })
-  ref: string;
+  @Prop({ required: false, type: Object })
+  ref: any;
   @Prop({ required: false })
   invisiblity: string[];
   @Prop({ required: true })

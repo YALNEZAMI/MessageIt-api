@@ -92,11 +92,9 @@ export class MessageService {
         .exec();
     }
 
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
     return messages;
   }
   async findMessageOfConv(idConv: string, idUser: string) {
@@ -118,13 +116,26 @@ export class MessageService {
         .limit(limit)
         .exec();
     }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
 
+    return messages;
+  }
+  async fillSenderAndRef(messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
       const user = await this.userService.findeUserForMessage(msg.sender);
       msg.sender = user;
+      if (msg.ref != '') {
+        const repMsg = await this.messageModel.findById(msg.ref);
+        msg.ref = repMsg;
+        const senderRef = await this.userService.findeUserForMessage(
+          msg.ref.sender,
+        );
+        msg.ref.sender = senderRef;
+      }
     }
-
     return messages;
   }
   async getRange(idConv: string, idMessage: string, userId?: string) {
@@ -135,18 +146,16 @@ export class MessageService {
     return index;
   }
   async getMessagesByKey(key: string, idConv: string, idUser: string) {
-    const messages = await this.messageModel
+    let messages = await this.messageModel
       .find({
         conv: idConv,
         invisiblity: { $nin: [idUser] },
         text: { $regex: key, $options: 'i' },
       })
       .exec();
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
 
     return messages;
   }
@@ -165,16 +174,14 @@ export class MessageService {
       limit = totalCount - range;
     }
 
-    const messages = await this.messageModel
+    let messages = await this.messageModel
       .find({ conv: idConv, invisiblity: { $nin: [userId] } })
       .skip(range)
       .limit(limit)
       .exec();
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
 
     return messages;
   }
@@ -188,16 +195,14 @@ export class MessageService {
       range = 0;
     }
 
-    const messages = await this.messageModel
+    let messages = await this.messageModel
       .find({ conv: idConv, invisiblity: { $nin: [userId] } })
       .skip(range)
       .limit(limit)
       .exec();
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    //replace sender<string> by sender<user>
+    //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+    messages = await this.fillSenderAndRef(messages);
 
     return messages;
   }
