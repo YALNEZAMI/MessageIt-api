@@ -24,7 +24,11 @@ export class MailerService {
     const code = Math.floor(100000 + Math.random() * 900000);
 
     const user = await this.userService.getUserByEmail(createMailerDto.email);
-    if (!user) return { status: 404, message: 'User not found' };
+
+    if (!user) {
+      return { status: 404, message: 'User not found' };
+    }
+
     await this.userService.update(user._id, { codePassword: code });
     const to = createMailerDto.email;
     const subject = 'Your code to reset your MessageIt password';
