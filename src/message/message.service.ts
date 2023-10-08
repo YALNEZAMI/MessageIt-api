@@ -114,7 +114,6 @@ export class MessageService {
       conv: idConv,
       visiblity: { $in: [idUser] },
     });
-    console.log(total);
 
     const limit = 20;
     const skip = total - limit;

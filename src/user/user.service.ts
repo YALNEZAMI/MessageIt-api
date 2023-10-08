@@ -28,26 +28,35 @@ export class UserService {
     createUserDto.photo = ' ';
     createUserDto.password2 = createUserDto.password2.trim();
     createUserDto.password = createUserDto.password.trim();
-
-    if (createUserDto.password === createUserDto.password2) {
-      if (await this.userAlreadyExist(createUserDto.email)) {
-        return { status: 501, message: 'User already exist' };
-      }
-      createUserDto.status = 'offline';
-      createUserDto.lastConnection = new Date();
-      createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
-      createUserDto.photo = process.env.api_url + '/user/uploads/user.png';
-      const user = await this.UserModel.create(createUserDto);
-      delete user.password;
-      user.password = '';
+    if (createUserDto.password.length < 6) {
       return {
-        status: 200,
-        message: 'Success, you can login now !',
-        user: user,
+        status: 404,
+        message: 'Short password !',
       };
-    } else {
-      return { status: 500, message: 'Passwords dont match' };
+    } else if (!createUserDto.email.includes('@')) {
+      return {
+        status: 404,
+        message: 'Please,use your real email !',
+      };
     }
+    if (createUserDto.password != createUserDto.password2) {
+      return { status: 404, message: 'Passwords dont match' };
+    }
+    if (await this.userAlreadyExist(createUserDto.email)) {
+      return { status: 501, message: 'User already exist' };
+    }
+    createUserDto.status = 'offline';
+    createUserDto.lastConnection = new Date();
+    createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
+    createUserDto.photo = process.env.api_url + '/user/uploads/user.png';
+    const user = await this.UserModel.create(createUserDto);
+    delete user.password;
+    user.password = '';
+    return {
+      status: 200,
+      message: 'Success, you can login now !',
+      user: user,
+    };
   }
   async addOptionsToUsers(users: any[], myid: string) {
     for (let i = 0; i < users.length; i++) {
@@ -165,7 +174,6 @@ export class UserService {
       if (updateUserDto.password === updateUserDto.password2) {
         updateUserDto.password = updateUserDto.password.trim();
         updateUserDto.password2 = updateUserDto.password2.trim();
-
         updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
         await this.UserModel.updateOne({ _id: id }, updateUserDto).exec();
         return this.UserModel.findOne({ _id: id }, { password: 0 }).exec();
@@ -209,27 +217,38 @@ export class UserService {
   async resetPassword(updateUserDto: UpdateUserDto) {
     updateUserDto.email = updateUserDto.email.toLowerCase();
     updateUserDto.password = updateUserDto.password.trim();
-    const user = await this.getUserByEmail(updateUserDto.email);
-
-    if (updateUserDto.codePassword == user.codePassword) {
-      if (
-        updateUserDto.password == updateUserDto.password2 &&
-        updateUserDto.password != ''
-      ) {
-        this.UserModel.updateOne(
-          { _id: user._id },
-          {
-            password: (await bcrypt.hash(updateUserDto.password, 10)).trim(),
-            codePassword: '',
-          },
-        ).exec();
-        return { status: 200, message: 'Success, you can login now !' };
-      } else {
-        return { status: 404, message: 'Passwords dont match' };
-      }
-    } else {
-      return { status: 404, message: 'Code incorrect' };
+    updateUserDto.password2 = updateUserDto.password2.trim();
+    if (updateUserDto.codePassword.toString().length != 6) {
+      return {
+        status: 404,
+        message: 'Password code must have 6 digits !',
+      };
+    } else if (updateUserDto.password != updateUserDto.password2) {
+      return {
+        status: 404,
+        message: 'Passwords dont match !',
+      };
+    } else if (updateUserDto.password.length < 6) {
+      return {
+        status: 404,
+        message: 'Short password !',
+      };
     }
+    const user = await this.getUserByEmail(updateUserDto.email);
+    if (!user) {
+      return {
+        status: 404,
+        message: 'Error with your email, restart !',
+      };
+    }
+    this.UserModel.updateOne(
+      { _id: user._id },
+      {
+        password: (await bcrypt.hash(updateUserDto.password, 10)).trim(),
+        codePassword: '',
+      },
+    ).exec();
+    return { status: 200, message: 'Success, you can login now !' };
   }
   async uploadProfilePhoto(file: any, id: string) {
     const user = await this.UserModel.findOne({ _id: id }).exec();

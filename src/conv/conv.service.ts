@@ -43,17 +43,11 @@ export class ConvService {
    * @returns  all conversations of the user
    */
   async convOfUser(idUser: string) {
-    const allConvs = await this.ConvModel.find().exec();
-    const res: any[] = [];
-    //iterate over all conversations to find out if the user is a member of the conversation
-    for (let i = 0; i < allConvs.length; i++) {
-      const conv = allConvs[i];
-      const members = conv.members;
-      if (members.includes(idUser)) {
-        res.push(conv);
-      }
-    }
-    return res;
+    const myConvs = await this.ConvModel.find({
+      members: { $in: [idUser] },
+    }).exec();
+
+    return myConvs;
   }
   /**
    *
@@ -165,6 +159,7 @@ export class ConvService {
     //iterate over the convs to set the name and the image
     for (let i = 0; i < myConvs.length; i++) {
       const conv = myConvs[i];
+
       //set the members
       const membersId = conv.members;
       const members = [];
@@ -178,7 +173,7 @@ export class ConvService {
       }
       conv.members = members;
       //set last message
-      const lasMessage = await this.getLastMessage(conv._id);
+      const lasMessage = await this.getLastMessage(conv._id.toString());
       conv.lastMessage = lasMessage;
 
       /**
