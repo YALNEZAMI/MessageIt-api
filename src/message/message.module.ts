@@ -6,10 +6,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Message, MessageSchema } from './entities/message.entity';
 import { UserModule } from 'src/user/user.module';
 import { WebSocketsModule } from 'src/web-sockets/web-sockets.module';
+import { SessionModule } from 'src/session/session.module';
 
 @Module({
   exports: [MessageService],
   imports: [
+    SessionModule,
     WebSocketsModule,
     UserModule,
     MongooseModule.forFeature([

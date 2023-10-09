@@ -1,21 +1,25 @@
 import { Injectable } from '@nestjs/common';
-// import { CreateSessionDto } from './dto/create-session.dto';
-// import { UpdateSessionDto } from './dto/update-session.dto';
-import * as jwt from 'jsonwebtoken';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class SessionService {
-  private readonly secretKey = 'your-secret-key'; // Replace with a strong, unique secret key
-
-  createToken(data: any): string {
-    return jwt.sign(data, this.secretKey, { expiresIn: '1h' }); // Adjust expiration as needed
-  }
-
-  verifyToken(token: string): any {
-    try {
-      return jwt.verify(token, this.secretKey);
-    } catch (error) {
-      return null;
-    }
+  constructor(private userService: UserService) {}
+  async setStatus(id: string, object: any) {
+    setTimeout(async () => {
+      const user = await this.userService.findOne(id);
+      const lastConnection: any = user.lastConnection;
+      const now: any = new Date();
+      const diff = now - lastConnection;
+      if (diff > 300000) {
+        await this.userService.update(id, { status: 'offline' });
+      }
+    }, 305000);
+    object.lastConnection = new Date();
+    await this.userService.update(id, object);
+    const res = await this.userService.findOne(id);
+    delete res.password;
+    delete res.email;
+    delete res.codePassword;
+    return res;
   }
 }

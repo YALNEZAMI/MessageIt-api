@@ -192,28 +192,7 @@ export class UserService {
       return user;
     }
   }
-  async setStatus(id: string, object: any) {
-    setTimeout(async () => {
-      const user = await this.UserModel.findOne({ _id: id }).exec();
-      const lastConnection: any = user.lastConnection;
-      const now: any = new Date();
-      const diff = now - lastConnection;
-      if (diff > 300000) {
-        await this.UserModel.updateOne(
-          { _id: id },
-          { status: 'offline' },
-        ).exec();
-      }
-    }, 305000);
-    object.lastConnection = new Date();
-    await this.UserModel.updateOne({ _id: id }, object).exec();
-    const res = await this.UserModel.findOne(
-      { _id: id },
-      { password: 0, email: 0, codePassword: 0 },
-    ).exec();
 
-    return res;
-  }
   async resetPassword(updateUserDto: UpdateUserDto) {
     updateUserDto.email = updateUserDto.email.toLowerCase();
     updateUserDto.password = updateUserDto.password.trim();

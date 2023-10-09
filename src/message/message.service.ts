@@ -7,6 +7,7 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { UserService } from 'src/user/user.service';
 import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
+import { SessionService } from 'src/session/session.service';
 
 @Injectable()
 export class MessageService {
@@ -14,6 +15,7 @@ export class MessageService {
     @InjectModel(Message.name)
     private messageModel: Model<MessageDocument>,
     private userService: UserService,
+    private sessionService: SessionService,
     private webSocketService: WebSocketsService,
   ) {}
   async create(createMessageDto: CreateMessageDto) {
@@ -29,7 +31,7 @@ export class MessageService {
     createMessageDto.vus = [];
     createMessageDto.vus.push(createMessageDto.sender);
     //set the user online
-    await this.userService.setStatus(createMessageDto.sender, {
+    await this.sessionService.setStatus(createMessageDto.sender, {
       status: 'online',
     });
     if (createMessageDto.text === '') {
@@ -226,6 +228,8 @@ export class MessageService {
   async setVus(body: any) {
     this.webSocketService.onSetVus(body);
     const id = body.myId;
+    //set viewver as Oline
+    this.sessionService.setStatus(id, { status: 'online' });
     const idConv = body.idConv;
     this.messageModel
       .updateMany({ conv: idConv }, { $addToSet: { vus: id } })

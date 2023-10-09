@@ -8,6 +8,7 @@ import { Conv, ConvDocument } from './entities/conv.entity';
 import { UserService } from 'src/user/user.service';
 import { MessageService } from 'src/message/message.service';
 import * as fs from 'fs';
+import { SessionService } from 'src/session/session.service';
 //service of conversation
 @Injectable()
 export class ConvService {
@@ -17,6 +18,7 @@ export class ConvService {
     private ConvModel: Model<ConvDocument>,
     private readonly userService: UserService,
     private messageService: MessageService,
+    private sessionService: SessionService,
   ) {}
   /**
    *
@@ -149,7 +151,7 @@ export class ConvService {
    */
   async getMyConvs(id: string) {
     //set the user online
-    await this.userService.setStatus(id, { status: 'online' });
+    await this.sessionService.setStatus(id, { status: 'online' });
     //get all conversations of the user
     const myConvs = await this.convOfUser(id);
 

@@ -6,6 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Conv, ConvSchema } from './entities/conv.entity';
 import { UserModule } from 'src/user/user.module';
 import { MessageModule } from 'src/message/message.module';
+import { SessionModule } from 'src/session/session.module';
 //module of conversation
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { MessageModule } from 'src/message/message.module';
     MongooseModule.forFeature([{ name: Conv.name, schema: ConvSchema }]),
     UserModule,
     MessageModule,
+    SessionModule,
   ],
   controllers: [ConvController],
   providers: [ConvService],
