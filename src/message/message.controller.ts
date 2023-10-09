@@ -7,20 +7,63 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('message')
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
   @Post()
-  create(@Body() createMessageDto: CreateMessageDto) {
-    return this.messageService.create(createMessageDto);
+  @UseInterceptors(
+    FilesInterceptor('files', 10, {
+      storage: diskStorage({
+        destination: 'assets/imagesOfMessages/',
+        filename: (req, file, callback) => {
+          const randomName = Array(50)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          return callback(null, `${randomName}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  create(
+    @Body() createMessageDto: CreateMessageDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.messageService.create(createMessageDto, files);
   }
-
+  //send 10 files at once
+  // @Post('files/:idMessage')
+  // @UseInterceptors(
+  //   FilesInterceptor('files', 10, {
+  //     storage: diskStorage({
+  //       destination: 'assets/imagesOfMessages/',
+  //       filename: (req, file, callback) => {
+  //         const randomName = Array(50)
+  //           .fill(null)
+  //           .map(() => Math.round(Math.random() * 16).toString(16))
+  //           .join('');
+  //         return callback(null, `${randomName}${extname(file.originalname)}`);
+  //       },
+  //     }),
+  //   }),
+  // )
+  // addFiles(
+  //   @UploadedFiles() files: Express.Multer.File[],
+  //   @Param('idMessage') idMessage: string,
+  // ) {
+  //   return this.messageService.addFiles(files, idMessage);
+  // }
   @Get()
   findAll() {
     return this.messageService.findAll();

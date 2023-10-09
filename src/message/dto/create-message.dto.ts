@@ -10,7 +10,7 @@ export class CreateMessageDto {
   @Column()
   text: string;
   @Column()
-  files: any[];
+  files: any;
   @Column()
   date: Date;
   @Column()

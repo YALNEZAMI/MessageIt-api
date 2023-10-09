@@ -18,7 +18,7 @@ export class MessageService {
     private sessionService: SessionService,
     private webSocketService: WebSocketsService,
   ) {}
-  async create(createMessageDto: CreateMessageDto) {
+  async create(createMessageDto: CreateMessageDto, files: any) {
     //setvisibility
     createMessageDto.visiblity = [];
     for (let i = 0; i < createMessageDto.conv.members.length; i++) {
@@ -34,15 +34,32 @@ export class MessageService {
     await this.sessionService.setStatus(createMessageDto.sender, {
       status: 'online',
     });
-    if (createMessageDto.text === '') {
-      return;
-    }
+    //files
+    const filesNames = [];
+    console.log(files);
+    return;
 
+    for (const file of files) {
+      filesNames.push(
+        process.env.api_url + '/message/uploads/' + file.filename,
+      );
+    }
+    createMessageDto.files = filesNames;
     const msg = await this.messageModel.create(createMessageDto);
     msg.sender = await this.userService.findeUserForMessage(msg.sender);
     this.webSocketService.onNewMessage(msg);
     return msg;
   }
+  // addFiles(files: any, idMessage: string) {
+  //   const filesNames = [];
+  //   for (const file of files) {
+  //     filesNames.push(
+  //       process.env.api_url + '/message/uploads/' + file.filename,
+  //     );
+  //   }
+  //   this.messageModel.updateOne({ _id: idMessage }, { files: filesNames });
+  //   return filesNames;
+  // }
 
   findAll() {
     return this.messageModel.find().exec();
