@@ -18,7 +18,9 @@ export class MessageService {
     private sessionService: SessionService,
     private webSocketService: WebSocketsService,
   ) {}
-  async create(createMessageDto: CreateMessageDto, files: any) {
+  async create(object: any, files: any) {
+    const createMessageDto: CreateMessageDto = JSON.parse(object.message);
+
     //setvisibility
     createMessageDto.visiblity = [];
     for (let i = 0; i < createMessageDto.conv.members.length; i++) {
@@ -36,8 +38,6 @@ export class MessageService {
     });
     //files
     const filesNames = [];
-    console.log(files);
-    return;
 
     for (const file of files) {
       filesNames.push(
