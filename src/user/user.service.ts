@@ -13,7 +13,10 @@ export class UserService {
   constructor(
     @InjectModel(User.name)
     private UserModel: Model<UserDocument>,
-  ) {}
+  ) {
+    //set all users offline
+    this.UserModel.updateMany({}, { status: 'offline' }).exec();
+  }
   async userAlreadyExist(email: string) {
     email = email.toLowerCase();
     const user = await this.UserModel.findOne({ email: email }).exec();
@@ -23,6 +26,7 @@ export class UserService {
       return true;
     }
   }
+
   async create(createUserDto: CreateUserDto) {
     createUserDto.email = createUserDto.email.toLowerCase();
     createUserDto.photo = ' ';

@@ -21,7 +21,7 @@ export class MessageService {
   async create(object: any, files: any) {
     const createMessageDto: CreateMessageDto = JSON.parse(object.message);
 
-    //setvisibility
+    //set visibility
     createMessageDto.visibility = [];
     for (let i = 0; i < createMessageDto.conv.members.length; i++) {
       const member = createMessageDto.conv.members[i];

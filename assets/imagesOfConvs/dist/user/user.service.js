@@ -22,6 +22,7 @@ const fs = require("fs");
 let UserService = class UserService {
     constructor(UserModel) {
         this.UserModel = UserModel;
+        this.UserModel.updateMany({}, { status: 'offline' }).exec();
     }
     async userAlreadyExist(email) {
         email = email.toLowerCase();
