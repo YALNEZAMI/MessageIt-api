@@ -38,9 +38,7 @@ let MessageService = class MessageService {
         createMessageDto.conv = createMessageDto.conv._id;
         createMessageDto.vus = [];
         createMessageDto.vus.push(createMessageDto.sender);
-        await this.sessionService.setStatus(createMessageDto.sender, {
-            status: 'online',
-        });
+        await this.sessionService.setStatus(createMessageDto.sender);
         const filesNames = [];
         for (const file of files) {
             filesNames.push(process.env.api_url + '/message/uploads/' + file.filename);
@@ -205,7 +203,7 @@ let MessageService = class MessageService {
     async setVus(body) {
         this.webSocketService.onSetVus(body);
         const id = body.myId;
-        this.sessionService.setStatus(id, { status: 'online' });
+        this.sessionService.setStatus(id);
         const idConv = body.idConv;
         this.messageModel
             .updateMany({ conv: idConv }, { $addToSet: { vus: id } })

@@ -60,6 +60,10 @@ __decorate([
     (0, mongoose_1.Prop)({ required: false }),
     __metadata("design:type", Number)
 ], User.prototype, "codePassword", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", String)
+], User.prototype, "theme", void 0);
 exports.User = User = __decorate([
     (0, mongoose_1.Schema)()
 ], User);

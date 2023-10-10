@@ -16,7 +16,7 @@ let SessionService = class SessionService {
     constructor(userService) {
         this.userService = userService;
     }
-    async setStatus(id, object) {
+    async setStatus(id) {
         setTimeout(async () => {
             const user = await this.userService.findOne(id);
             const lastConnection = user.lastConnection;
@@ -26,8 +26,10 @@ let SessionService = class SessionService {
                 await this.userService.update(id, { status: 'offline' });
             }
         }, 305000);
-        object.lastConnection = new Date();
-        await this.userService.update(id, object);
+        await this.userService.update(id, {
+            status: 'online',
+            lastConnection: new Date(),
+        });
         const res = await this.userService.findOne(id);
         delete res.password;
         delete res.email;
@@ -35,7 +37,12 @@ let SessionService = class SessionService {
         return res;
     }
     setStatusMannualy(id, body) {
-        this.userService.update(id, { status: body.status });
+        if (body.status === 'online') {
+            this.setStatus(id);
+        }
+        else {
+            this.userService.update(id, { status: body.status });
+        }
     }
 };
 exports.SessionService = SessionService;

@@ -9,5 +9,6 @@ export declare class CreateUserDto {
     addReq: string[];
     friends: string[];
     status: string;
+    theme: string;
     lastConnection: Date;
 }

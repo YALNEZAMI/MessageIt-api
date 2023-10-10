@@ -33,6 +33,8 @@ export class User {
   lastConnection: Date;
   @Prop({ required: false })
   codePassword: number;
+  @Prop({ required: true })
+  theme: string;
 }
 export const UserSchema = SchemaFactory.createForClass(User);
 export type UserDocument = User & Document;

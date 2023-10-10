@@ -110,7 +110,7 @@ let ConvService = class ConvService {
         }
     }
     async getMyConvs(id) {
-        await this.sessionService.setStatus(id, { status: 'online' });
+        await this.sessionService.setStatus(id);
         const myConvs = await this.convOfUser(id);
         if (myConvs.length == 0) {
             return [];

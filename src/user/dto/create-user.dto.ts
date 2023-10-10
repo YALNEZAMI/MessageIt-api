@@ -23,5 +23,7 @@ export class CreateUserDto {
   @Column()
   status: string;
   @Column()
+  theme: string;
+  @Column()
   lastConnection: Date;
 }

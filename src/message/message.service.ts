@@ -34,9 +34,7 @@ export class MessageService {
     createMessageDto.vus = [];
     createMessageDto.vus.push(createMessageDto.sender);
     //set the user online
-    await this.sessionService.setStatus(createMessageDto.sender, {
-      status: 'online',
-    });
+    await this.sessionService.setStatus(createMessageDto.sender);
     //files
     const filesNames = [];
 
@@ -230,7 +228,7 @@ export class MessageService {
     this.webSocketService.onSetVus(body);
     const id = body.myId;
     //set viewver as Oline
-    this.sessionService.setStatus(id, { status: 'online' });
+    this.sessionService.setStatus(id);
     const idConv = body.idConv;
     this.messageModel
       .updateMany({ conv: idConv }, { $addToSet: { vus: id } })

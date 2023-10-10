@@ -35,6 +35,7 @@ let UserService = class UserService {
         }
     }
     async create(createUserDto) {
+        createUserDto.theme = 'basic';
         createUserDto.email = createUserDto.email.toLowerCase();
         createUserDto.photo = ' ';
         createUserDto.password2 = createUserDto.password2.trim();
@@ -160,6 +161,15 @@ let UserService = class UserService {
             if (matchPassword) {
                 delete user.password;
                 user.password = '';
+                setTimeout(async () => {
+                    const lastConnection = user.lastConnection;
+                    const now = new Date();
+                    const diff = now - lastConnection;
+                    if (diff > 300000) {
+                        await this.update(user._id, { status: 'offline' });
+                    }
+                }, 305000);
+                await this.update(user._id, { lastConnection: new Date() });
                 return { status: 200, message: 'Success, you can login !', user: user };
             }
             else {

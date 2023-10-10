@@ -28,6 +28,8 @@ export class UserService {
   }
 
   async create(createUserDto: CreateUserDto) {
+    //set theme
+    createUserDto.theme = 'basic';
     createUserDto.email = createUserDto.email.toLowerCase();
     createUserDto.photo = ' ';
     createUserDto.password2 = createUserDto.password2.trim();
@@ -163,6 +165,16 @@ export class UserService {
       if (matchPassword) {
         delete user.password;
         user.password = '';
+        //set as online
+        setTimeout(async () => {
+          const lastConnection: any = user.lastConnection;
+          const now: any = new Date();
+          const diff = now - lastConnection;
+          if (diff > 300000) {
+            await this.update(user._id, { status: 'offline' });
+          }
+        }, 305000);
+        await this.update(user._id, { lastConnection: new Date() });
         return { status: 200, message: 'Success, you can login !', user: user };
       } else {
         return { status: 500, message: 'Password incorrect' };

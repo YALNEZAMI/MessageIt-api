@@ -12,5 +12,6 @@ export declare class UpdateUserDto extends UpdateUserDto_base {
     status?: string;
     codePassword?: number;
     lastConnection?: Date;
+    theme?: string;
 }
 export {};

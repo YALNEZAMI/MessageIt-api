@@ -52,6 +52,10 @@ __decorate([
 ], CreateUserDto.prototype, "status", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "theme", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
     __metadata("design:type", Date)
 ], CreateUserDto.prototype, "lastConnection", void 0);
 exports.CreateUserDto = CreateUserDto = __decorate([

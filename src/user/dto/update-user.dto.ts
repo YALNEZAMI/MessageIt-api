@@ -14,4 +14,5 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   status?: string;
   codePassword?: number;
   lastConnection?: Date;
+  theme?: string;
 }

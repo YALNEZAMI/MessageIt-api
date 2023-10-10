@@ -27,7 +27,7 @@ import { UserService } from 'src/user/user.service';
 export declare class SessionService {
     private userService;
     constructor(userService: UserService);
-    setStatus(id: string, object: any): Promise<import("mongoose").Document<unknown, {}, import("../user/entities/user.entity").UserDocument> & import("../user/entities/user.entity").User & import("mongoose").Document<any, any, any> & {
+    setStatus(id: string): Promise<import("mongoose").Document<unknown, {}, import("../user/entities/user.entity").UserDocument> & import("../user/entities/user.entity").User & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     }>;
     setStatusMannualy(id: string, body: any): void;
