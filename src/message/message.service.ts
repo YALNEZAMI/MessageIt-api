@@ -27,7 +27,6 @@ export class MessageService {
       const member = createMessageDto.conv.members[i];
       createMessageDto.visibility.push(member._id);
     }
-    console.log(createMessageDto);
 
     //when we finish setting visibility, conv become a simple con _id
     createMessageDto.conv = createMessageDto.conv._id;

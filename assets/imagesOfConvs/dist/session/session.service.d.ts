@@ -30,4 +30,5 @@ export declare class SessionService {
     setStatus(id: string, object: any): Promise<import("mongoose").Document<unknown, {}, import("../user/entities/user.entity").UserDocument> & import("../user/entities/user.entity").User & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     }>;
+    setStatusMannualy(id: string, body: any): void;
 }

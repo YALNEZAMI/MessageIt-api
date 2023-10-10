@@ -23,4 +23,7 @@ export class SessionService {
     delete res.codePassword;
     return res;
   }
+  setStatusMannualy(id: string, body: any) {
+    this.userService.update(id, { status: body.status });
+  }
 }

@@ -1,6 +1,11 @@
 import {
   Controller,
-  //  Get, Post, Body, Patch, Param, Delete
+  // Get,
+  // Post,
+  Body,
+  Patch,
+  Param,
+  // Delete,
 } from '@nestjs/common';
 import { SessionService } from './session.service';
 // import { CreateSessionDto } from './dto/create-session.dto';
@@ -25,10 +30,10 @@ export class SessionController {
   //   return this.sessionService.findOne(+id);
   // }
 
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateSessionDto: UpdateSessionDto) {
-  //   return this.sessionService.update(+id, updateSessionDto);
-  // }
+  @Patch('setStatus/:id')
+  setStatus(@Param('id') id: string, @Body() body: any) {
+    return this.sessionService.setStatusMannualy(id, body);
+  }
 
   // @Delete(':id')
   // remove(@Param('id') id: string) {

@@ -35,7 +35,6 @@ let MessageService = class MessageService {
             const member = createMessageDto.conv.members[i];
             createMessageDto.visibility.push(member._id);
         }
-        console.log(createMessageDto);
         createMessageDto.conv = createMessageDto.conv._id;
         createMessageDto.vus = [];
         createMessageDto.vus.push(createMessageDto.sender);

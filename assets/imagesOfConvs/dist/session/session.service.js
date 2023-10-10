@@ -34,6 +34,9 @@ let SessionService = class SessionService {
         delete res.codePassword;
         return res;
     }
+    setStatusMannualy(id, body) {
+        this.userService.update(id, { status: body.status });
+    }
 };
 exports.SessionService = SessionService;
 exports.SessionService = SessionService = __decorate([
