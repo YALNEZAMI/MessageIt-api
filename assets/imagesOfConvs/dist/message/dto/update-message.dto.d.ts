@@ -6,7 +6,7 @@ export declare class UpdateMessageDto extends UpdateMessageDto_base {
     files?: any[];
     date?: Date;
     ref?: string;
-    visiblity?: string[];
+    visibility?: string[];
     sender?: string;
     vus?: string[];
 }

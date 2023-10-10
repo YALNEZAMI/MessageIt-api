@@ -1,3 +1,4 @@
+/// <reference types="multer" />
 /// <reference types="mongoose/types/aggregate" />
 /// <reference types="mongoose/types/callback" />
 /// <reference types="mongoose/types/collection" />
@@ -23,15 +24,16 @@
 /// <reference types="mongoose/types/virtuals" />
 /// <reference types="mongoose" />
 /// <reference types="mongoose/types/inferschematype" />
+import { Response } from 'express';
 import { MessageService } from './message.service';
-import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 export declare class MessageController {
     private readonly messageService;
     constructor(messageService: MessageService);
-    create(createMessageDto: CreateMessageDto): Promise<import("mongoose").Document<unknown, {}, import("./entities/message.entity").MessageDocument> & import("./entities/message.entity").Message & import("mongoose").Document<any, any, any> & {
+    create(message: any, files: Express.Multer.File[]): Promise<import("mongoose").Document<unknown, {}, import("./entities/message.entity").MessageDocument> & import("./entities/message.entity").Message & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     }>;
+    sendFile(fileId: string, res: Response): void;
     findAll(): Promise<(import("mongoose").Document<unknown, {}, import("./entities/message.entity").MessageDocument> & import("./entities/message.entity").Message & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     })[]>;
@@ -48,9 +50,12 @@ export declare class MessageController {
         _id: import("mongoose").Types.ObjectId;
     })[]>;
     findMessageOfConv(idConv: string, idUser: string): Promise<any[]>;
+    getMedias(idConv: string, idUser: string): Promise<(import("mongoose").Document<unknown, {}, import("./entities/message.entity").MessageDocument> & import("./entities/message.entity").Message & import("mongoose").Document<any, any, any> & {
+        _id: import("mongoose").Types.ObjectId;
+    })[]>;
     update(id: string, updateMessageDto: UpdateMessageDto): Promise<import("mongoose").UpdateWriteOpResult>;
     setVus(body: any): Promise<void>;
     remove(id: string): Promise<any>;
     deleteForMe(object: any): Promise<any>;
-    removeAll(): any;
+    removeAll(): Promise<any>;
 }

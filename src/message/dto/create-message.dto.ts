@@ -10,13 +10,13 @@ export class CreateMessageDto {
   @Column()
   text: string;
   @Column()
-  files: any[];
+  files: any;
   @Column()
   date: Date;
   @Column()
   ref: string;
   @Column()
-  visiblity: string[];
+  visibility: string[];
   @Column()
   vus: string[];
 

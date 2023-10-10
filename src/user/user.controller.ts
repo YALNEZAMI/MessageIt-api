@@ -8,7 +8,6 @@ import {
   Patch,
   Param,
   Delete,
-  Req,
   UseInterceptors,
   UploadedFile,
   Res,
@@ -20,7 +19,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 // import * as path from 'path';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { UploadedFileInterface } from 'src/interfaces/photo';
 // import { env } from 'src/env';
 @Controller('user')
@@ -33,11 +32,7 @@ export class UserController {
   }
 
   @Get('login/:email/:password')
-  login(
-    @Req() req: Request,
-    @Param('email') email: string,
-    @Param('password') password: string,
-  ) {
+  login(@Param('email') email: string, @Param('password') password: string) {
     // req.session['user'] = email;
     const data = {
       email: email,

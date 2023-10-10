@@ -1,4 +1,7 @@
 /* eslint-disable prettier/prettier */
+import * as fs from 'fs';
+import { Response } from 'express';
+
 import {
   Controller,
   Get,
@@ -7,20 +10,51 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
+  UploadedFiles,
+  Res,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
-import { CreateMessageDto } from './dto/create-message.dto';
+// import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('message')
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
   @Post()
-  create(@Body() createMessageDto: CreateMessageDto) {
-    return this.messageService.create(createMessageDto);
+  @UseInterceptors(
+    FilesInterceptor('files', 10, {
+      storage: diskStorage({
+        destination: 'assets/imagesOfMessages/',
+        filename: (req, file, callback) => {
+          const randomName = Array(50)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          return callback(null, `${randomName}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  create(@Body() message: any, @UploadedFiles() files: Express.Multer.File[]) {
+    return this.messageService.create(message, files);
   }
-
+  @Get('uploads/:fileId')
+  sendFile(@Param('fileId') fileId: string, @Res() res: Response) {
+    fs.access('assets/imagesOfMessages/' + fileId, fs.constants.F_OK, (err) => {
+      if (err) {
+        res.sendFile('/imagesOfMessages/deleted.png', { root: 'assets' });
+        // Handle the case where the file does not exist
+      } else {
+        res.sendFile('/imagesOfMessages/' + fileId, { root: 'assets' });
+        // Handle the case where the file exists
+      }
+    });
+  }
   @Get()
   findAll() {
     return this.messageService.findAll();
@@ -81,6 +115,10 @@ export class MessageController {
     @Param('idUser') idUser: string,
   ) {
     return this.messageService.findMessageOfConv(idConv, idUser);
+  }
+  @Get('/medias/:idConv/:idUser')
+  getMedias(@Param('idConv') idConv: string, @Param('idUser') idUser: string) {
+    return this.messageService.getMedias(idConv, idUser);
   }
 
   @Patch(':id')

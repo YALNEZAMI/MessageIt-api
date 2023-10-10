@@ -8,7 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { UserService } from 'src/user/user.service';
 import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
 import { SessionService } from 'src/session/session.service';
-
+import * as fs from 'fs';
 @Injectable()
 export class MessageService {
   constructor(
@@ -18,13 +18,17 @@ export class MessageService {
     private sessionService: SessionService,
     private webSocketService: WebSocketsService,
   ) {}
-  async create(createMessageDto: CreateMessageDto) {
+  async create(object: any, files: any) {
+    const createMessageDto: CreateMessageDto = JSON.parse(object.message);
+
     //setvisibility
-    createMessageDto.visiblity = [];
+    createMessageDto.visibility = [];
     for (let i = 0; i < createMessageDto.conv.members.length; i++) {
       const member = createMessageDto.conv.members[i];
-      createMessageDto.visiblity.push(member._id);
+      createMessageDto.visibility.push(member._id);
     }
+    console.log(createMessageDto);
+
     //when we finish setting visibility, conv become a simple con _id
     createMessageDto.conv = createMessageDto.conv._id;
     //the sender is set to a viewer of his message here
@@ -34,10 +38,15 @@ export class MessageService {
     await this.sessionService.setStatus(createMessageDto.sender, {
       status: 'online',
     });
-    if (createMessageDto.text === '') {
-      return;
-    }
+    //files
+    const filesNames = [];
 
+    for (const file of files) {
+      filesNames.push(
+        process.env.api_url + '/message/uploads/' + file.filename,
+      );
+    }
+    createMessageDto.files = filesNames;
     const msg = await this.messageModel.create(createMessageDto);
     msg.sender = await this.userService.findeUserForMessage(msg.sender);
     this.webSocketService.onNewMessage(msg);
@@ -57,23 +66,7 @@ export class MessageService {
 
     return msgs;
   }
-  async deleteForMe(object: any): Promise<any> {
-    //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
-    object.operation = 'deleteForMe';
-    this.webSocketService.onMessageDeleted(object);
-    const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
-    if (msg.visiblity.length == 1) {
-      return this.messageModel.deleteMany({ _id: object.idMsg }).exec();
-    }
-    return this.messageModel
-      .updateOne(
-        { _id: object.idMsg },
-        {
-          $pull: { visiblity: object.idUser },
-        },
-      )
-      .exec();
-  }
+
   async getMessageSearchedGroup(
     idConv: string,
     idMessage: string,
@@ -83,7 +76,7 @@ export class MessageService {
     let messages = [];
     const totalCount = await this.messageModel.countDocuments({
       conv: idConv,
-      visiblity: { $in: [userId] },
+      visibility: { $in: [userId] },
     });
     let limit: number = 20;
     if (totalCount < 20) {
@@ -114,7 +107,7 @@ export class MessageService {
   async findMessageOfConv(idConv: string, idUser: string) {
     const total = await this.messageModel.countDocuments({
       conv: idConv,
-      visiblity: { $in: [idUser] },
+      visibility: { $in: [idUser] },
     });
 
     const limit = 20;
@@ -122,11 +115,11 @@ export class MessageService {
     let messages = [];
     if (total < 20) {
       messages = await this.messageModel
-        .find({ conv: idConv, visiblity: { $in: [idUser] } })
+        .find({ conv: idConv, visibility: { $in: [idUser] } })
         .exec();
     } else {
       messages = await this.messageModel
-        .find({ conv: idConv, visiblity: { $in: [idUser] } })
+        .find({ conv: idConv, visibility: { $in: [idUser] } })
         .skip(skip)
         .limit(limit)
         .exec();
@@ -136,6 +129,15 @@ export class MessageService {
     messages = await this.fillSenderAndRef(messages);
 
     return messages;
+  }
+  getMedias(idConv: string, idUser: string) {
+    return this.messageModel
+      .find({
+        conv: idConv,
+        visibility: { $in: [idUser] },
+        files: { $exists: true, $ne: [] },
+      })
+      .exec();
   }
   async fillSenderAndRef(messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
@@ -155,7 +157,7 @@ export class MessageService {
   }
   async getRange(idConv: string, idMessage: string, userId?: string) {
     const all = await this.messageModel
-      .find({ conv: idConv, visiblity: { $in: [userId] } })
+      .find({ conv: idConv, visibility: { $in: [userId] } })
       .exec();
     const index = all.findIndex((msg) => msg._id == idMessage);
     return index;
@@ -164,7 +166,7 @@ export class MessageService {
     let messages = await this.messageModel
       .find({
         conv: idConv,
-        visiblity: { $in: [idUser] },
+        visibility: { $in: [idUser] },
         text: { $regex: key, $options: 'i' },
       })
       .exec();
@@ -182,7 +184,7 @@ export class MessageService {
     let limit: number = 20;
     const totalCount = await this.messageModel.countDocuments({
       conv: idConv,
-      visiblity: { $in: [userId] },
+      visibility: { $in: [userId] },
     });
     if (totalCount - range < 20) {
       range++;
@@ -190,7 +192,7 @@ export class MessageService {
     }
 
     let messages = await this.messageModel
-      .find({ conv: idConv, visiblity: { $in: [userId] } })
+      .find({ conv: idConv, visibility: { $in: [userId] } })
       .skip(range)
       .limit(limit)
       .exec();
@@ -211,7 +213,7 @@ export class MessageService {
     }
 
     let messages = await this.messageModel
-      .find({ conv: idConv, visiblity: { $in: [userId] } })
+      .find({ conv: idConv, visibility: { $in: [userId] } })
       .skip(range)
       .limit(limit)
       .exec();
@@ -238,6 +240,25 @@ export class MessageService {
 
   async remove(id: string): Promise<any> {
     const msg = await this.messageModel.findOne({ _id: id }).exec();
+
+    const files = msg.files;
+    for (let file of files) {
+      file = file.split('/');
+      file = file[file.length - 1];
+      fs.access('assets/imagesOfMessages/' + file, fs.constants.F_OK, (err) => {
+        if (err) {
+          // Handle the case where the file does not exist
+        } else {
+          fs.unlink('assets/imagesOfMessages/' + file, (err) => {
+            if (err) {
+              console.error(err);
+              return;
+            }
+          });
+          // Handle the case where the file exists
+        }
+      });
+    }
     await this.messageModel.deleteMany({ _id: id }).exec();
     //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
 
@@ -249,7 +270,51 @@ export class MessageService {
     this.webSocketService.onMessageDeleted(obj);
     return obj;
   }
-  removeAll(): any {
+  async deleteForMe(object: any): Promise<any> {
+    //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
+    object.operation = 'deleteForMe';
+    this.webSocketService.onMessageDeleted(object);
+    const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
+    if (msg.visibility.length == 1) {
+      return await this.remove(object.idMsg);
+    }
+    return this.messageModel
+      .updateOne(
+        { _id: object.idMsg },
+        {
+          $pull: { visibility: object.idUser },
+        },
+      )
+      .exec();
+  }
+  async removeAll(): Promise<any> {
+    const msgsWithMedias = await this.messageModel
+      .find({ files: { $exists: true, $ne: [] } })
+      .exec();
+    for (const msg of msgsWithMedias) {
+      const files = msg.files;
+      for (let file of files) {
+        file = file.split('/');
+        file = file[file.length - 1];
+        fs.access(
+          'assets/imagesOfMessages/' + file,
+          fs.constants.F_OK,
+          (err) => {
+            if (err) {
+              // Handle the case where the file does not exist
+            } else {
+              fs.unlink('assets/imagesOfMessages/' + file, (err) => {
+                if (err) {
+                  console.error(err);
+                  return;
+                }
+              });
+              // Handle the case where the file exists
+            }
+          },
+        );
+      }
+    }
     return this.messageModel.deleteMany().exec();
   }
   removeAllFromConv(idConv: string): any {

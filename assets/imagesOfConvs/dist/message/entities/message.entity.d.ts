@@ -29,7 +29,7 @@ export declare class Message {
     files: any[];
     date: Date;
     ref: any;
-    visiblity: string[];
+    visibility: string[];
     vus: string[];
     sender: any;
 }

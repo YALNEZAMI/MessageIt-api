@@ -22,7 +22,6 @@
 /// <reference types="mongoose/types/validation" />
 /// <reference types="mongoose/types/virtuals" />
 /// <reference types="mongoose/types/inferschematype" />
-import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { Message, MessageDocument } from './entities/message.entity';
 import { Model } from 'mongoose';
@@ -35,7 +34,7 @@ export declare class MessageService {
     private sessionService;
     private webSocketService;
     constructor(messageModel: Model<MessageDocument>, userService: UserService, sessionService: SessionService, webSocketService: WebSocketsService);
-    create(createMessageDto: CreateMessageDto): Promise<import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {
+    create(object: any, files: any): Promise<import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     }>;
     findAll(): Promise<(import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {
@@ -44,9 +43,11 @@ export declare class MessageService {
     findAllMessageOfConv(idConv: string): Promise<(import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     })[]>;
-    deleteForMe(object: any): Promise<any>;
     getMessageSearchedGroup(idConv: string, idMessage: string, userId: string): Promise<any[]>;
     findMessageOfConv(idConv: string, idUser: string): Promise<any[]>;
+    getMedias(idConv: string, idUser: string): Promise<(import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {
+        _id: import("mongoose").Types.ObjectId;
+    })[]>;
     fillSenderAndRef(messages: any[]): Promise<any[]>;
     getRange(idConv: string, idMessage: string, userId?: string): Promise<number>;
     getMessagesByKey(key: string, idConv: string, idUser: string): Promise<(import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {
@@ -62,6 +63,7 @@ export declare class MessageService {
     update(id: string, updateMessageDto: UpdateMessageDto): Promise<import("mongoose").UpdateWriteOpResult>;
     setVus(body: any): Promise<void>;
     remove(id: string): Promise<any>;
-    removeAll(): any;
+    deleteForMe(object: any): Promise<any>;
+    removeAll(): Promise<any>;
     removeAllFromConv(idConv: string): any;
 }

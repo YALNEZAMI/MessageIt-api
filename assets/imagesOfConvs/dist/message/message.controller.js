@@ -13,16 +13,29 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessageController = void 0;
+const fs = require("fs");
 const common_1 = require("@nestjs/common");
 const message_service_1 = require("./message.service");
-const create_message_dto_1 = require("./dto/create-message.dto");
 const update_message_dto_1 = require("./dto/update-message.dto");
+const platform_express_1 = require("@nestjs/platform-express");
+const multer_1 = require("multer");
+const path_1 = require("path");
 let MessageController = class MessageController {
     constructor(messageService) {
         this.messageService = messageService;
     }
-    create(createMessageDto) {
-        return this.messageService.create(createMessageDto);
+    create(message, files) {
+        return this.messageService.create(message, files);
+    }
+    sendFile(fileId, res) {
+        fs.access('assets/imagesOfMessages/' + fileId, fs.constants.F_OK, (err) => {
+            if (err) {
+                res.sendFile('/imagesOfMessages/deleted.png', { root: 'assets' });
+            }
+            else {
+                res.sendFile('/imagesOfMessages/' + fileId, { root: 'assets' });
+            }
+        });
     }
     findAll() {
         return this.messageService.findAll();
@@ -48,6 +61,9 @@ let MessageController = class MessageController {
     findMessageOfConv(idConv, idUser) {
         return this.messageService.findMessageOfConv(idConv, idUser);
     }
+    getMedias(idConv, idUser) {
+        return this.messageService.getMedias(idConv, idUser);
+    }
     update(id, updateMessageDto) {
         return this.messageService.update(id, updateMessageDto);
     }
@@ -67,11 +83,32 @@ let MessageController = class MessageController {
 exports.MessageController = MessageController;
 __decorate([
     (0, common_1.Post)(),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FilesInterceptor)('files', 10, {
+        storage: (0, multer_1.diskStorage)({
+            destination: 'assets/imagesOfMessages/',
+            filename: (req, file, callback) => {
+                const randomName = Array(50)
+                    .fill(null)
+                    .map(() => Math.round(Math.random() * 16).toString(16))
+                    .join('');
+                return callback(null, `${randomName}${(0, path_1.extname)(file.originalname)}`);
+            },
+        }),
+    })),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.UploadedFiles)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_message_dto_1.CreateMessageDto]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", void 0)
 ], MessageController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)('uploads/:fileId'),
+    __param(0, (0, common_1.Param)('fileId')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "sendFile", null);
 __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),
@@ -137,6 +174,14 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], MessageController.prototype, "findMessageOfConv", null);
+__decorate([
+    (0, common_1.Get)('/medias/:idConv/:idUser'),
+    __param(0, (0, common_1.Param)('idConv')),
+    __param(1, (0, common_1.Param)('idUser')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "getMedias", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
