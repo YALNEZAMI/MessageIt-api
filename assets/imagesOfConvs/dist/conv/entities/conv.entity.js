@@ -37,6 +37,10 @@ __decorate([
 ], Conv.prototype, "status", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", String)
+], Conv.prototype, "theme", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", Array)
 ], Conv.prototype, "members", void 0);
 exports.Conv = Conv = __decorate([

@@ -15,6 +15,8 @@ export class Conv {
   @Prop({ required: true })
   status: string;
   @Prop({ required: true })
+  theme: string;
+  @Prop({ required: true })
   members: any[];
 }
 export const ConvSchema = SchemaFactory.createForClass(Conv);

@@ -17,6 +17,9 @@ export class CreateConvDto {
   //status of the conversation if exist
   @Column()
   status: string;
+  //theme of conv
+  @Column()
+  theme: string;
   //members of the conversation(string to set and array to get)
   @Column()
   members: any[];

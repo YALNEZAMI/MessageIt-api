@@ -4,5 +4,6 @@ export declare class CreateConvDto {
     name: string;
     description: string;
     status: string;
+    theme: string;
     members: any[];
 }

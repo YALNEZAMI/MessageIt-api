@@ -30,6 +30,7 @@ export declare class Conv {
     name: string;
     description: string;
     status: string;
+    theme: string;
     members: any[];
 }
 export declare const ConvSchema: import("mongoose").Schema<Conv, import("mongoose").Model<Conv, any, any, any, Document<unknown, any, Conv> & Conv & {

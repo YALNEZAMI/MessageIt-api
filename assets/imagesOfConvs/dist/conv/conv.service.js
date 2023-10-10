@@ -46,6 +46,9 @@ let ConvService = class ConvService {
         return myConvs;
     }
     async create(createConvDto) {
+        if (createConvDto.theme == undefined) {
+            createConvDto.theme = 'basic';
+        }
         const exist = await this.convExistBetween(createConvDto.members[0], createConvDto.members[1]);
         if (exist.bool) {
             return await this.findOne(exist.idConv);

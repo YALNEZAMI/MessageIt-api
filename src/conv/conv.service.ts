@@ -57,6 +57,10 @@ export class ConvService {
    * @returns the conversation created
    */
   async create(createConvDto: CreateConvDto) {
+    //set theme
+    if (createConvDto.theme == undefined) {
+      createConvDto.theme = 'basic';
+    }
     //check if the conversation exist between the two users
     const exist = await this.convExistBetween(
       createConvDto.members[0],

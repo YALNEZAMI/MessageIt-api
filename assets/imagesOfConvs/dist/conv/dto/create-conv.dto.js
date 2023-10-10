@@ -36,6 +36,10 @@ __decorate([
 ], CreateConvDto.prototype, "status", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], CreateConvDto.prototype, "theme", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
     __metadata("design:type", Array)
 ], CreateConvDto.prototype, "members", void 0);
 exports.CreateConvDto = CreateConvDto = __decorate([

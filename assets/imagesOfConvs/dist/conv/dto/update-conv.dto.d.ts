@@ -6,5 +6,6 @@ export declare class UpdateConvDto extends UpdateConvDto_base {
     description?: string;
     members?: any[];
     status?: string;
+    theme?: string;
 }
 export {};
