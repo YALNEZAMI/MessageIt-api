@@ -8,7 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { UserService } from 'src/user/user.service';
 import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
 import { SessionService } from 'src/session/session.service';
-
+import * as fs from 'fs';
 @Injectable()
 export class MessageService {
   constructor(
@@ -50,16 +50,6 @@ export class MessageService {
     this.webSocketService.onNewMessage(msg);
     return msg;
   }
-  // addFiles(files: any, idMessage: string) {
-  //   const filesNames = [];
-  //   for (const file of files) {
-  //     filesNames.push(
-  //       process.env.api_url + '/message/uploads/' + file.filename,
-  //     );
-  //   }
-  //   this.messageModel.updateOne({ _id: idMessage }, { files: filesNames });
-  //   return filesNames;
-  // }
 
   findAll() {
     return this.messageModel.find().exec();
@@ -74,23 +64,7 @@ export class MessageService {
 
     return msgs;
   }
-  async deleteForMe(object: any): Promise<any> {
-    //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
-    object.operation = 'deleteForMe';
-    this.webSocketService.onMessageDeleted(object);
-    const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
-    if (msg.visiblity.length == 1) {
-      return this.messageModel.deleteMany({ _id: object.idMsg }).exec();
-    }
-    return this.messageModel
-      .updateOne(
-        { _id: object.idMsg },
-        {
-          $pull: { visiblity: object.idUser },
-        },
-      )
-      .exec();
-  }
+
   async getMessageSearchedGroup(
     idConv: string,
     idMessage: string,
@@ -255,6 +229,25 @@ export class MessageService {
 
   async remove(id: string): Promise<any> {
     const msg = await this.messageModel.findOne({ _id: id }).exec();
+
+    const files = msg.files;
+    for (let file of files) {
+      file = file.split('/');
+      file = file[file.length - 1];
+      fs.access('assets/imagesOfMessages/' + file, fs.constants.F_OK, (err) => {
+        if (err) {
+          // Handle the case where the file does not exist
+        } else {
+          fs.unlink('assets/imagesOfMessages/' + file, (err) => {
+            if (err) {
+              console.error(err);
+              return;
+            }
+          });
+          // Handle the case where the file exists
+        }
+      });
+    }
     await this.messageModel.deleteMany({ _id: id }).exec();
     //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
 
@@ -265,6 +258,23 @@ export class MessageService {
     };
     this.webSocketService.onMessageDeleted(obj);
     return obj;
+  }
+  async deleteForMe(object: any): Promise<any> {
+    //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
+    object.operation = 'deleteForMe';
+    this.webSocketService.onMessageDeleted(object);
+    const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
+    if (msg.visiblity.length == 1) {
+      return await this.remove(object.idMsg);
+    }
+    return this.messageModel
+      .updateOne(
+        { _id: object.idMsg },
+        {
+          $pull: { visiblity: object.idUser },
+        },
+      )
+      .exec();
   }
   removeAll(): any {
     return this.messageModel.deleteMany().exec();

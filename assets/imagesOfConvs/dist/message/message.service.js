@@ -20,6 +20,7 @@ const mongoose_2 = require("@nestjs/mongoose");
 const user_service_1 = require("../user/user.service");
 const web_sockets_service_1 = require("../web-sockets/web-sockets.service");
 const session_service_1 = require("../session/session.service");
+const fs = require("fs");
 let MessageService = class MessageService {
     constructor(messageModel, userService, sessionService, webSocketService) {
         this.messageModel = messageModel;
@@ -61,19 +62,6 @@ let MessageService = class MessageService {
             msg.sender = user;
         }
         return msgs;
-    }
-    async deleteForMe(object) {
-        object.operation = 'deleteForMe';
-        this.webSocketService.onMessageDeleted(object);
-        const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
-        if (msg.visiblity.length == 1) {
-            return this.messageModel.deleteMany({ _id: object.idMsg }).exec();
-        }
-        return this.messageModel
-            .updateOne({ _id: object.idMsg }, {
-            $pull: { visiblity: object.idUser },
-        })
-            .exec();
     }
     async getMessageSearchedGroup(idConv, idMessage, userId) {
         let range = await this.getRange(idConv, idMessage, userId);
@@ -216,6 +204,23 @@ let MessageService = class MessageService {
     }
     async remove(id) {
         const msg = await this.messageModel.findOne({ _id: id }).exec();
+        const files = msg.files;
+        for (let file of files) {
+            file = file.split('/');
+            file = file[file.length - 1];
+            fs.access('assets/imagesOfMessages/' + file, fs.constants.F_OK, (err) => {
+                if (err) {
+                }
+                else {
+                    fs.unlink('assets/imagesOfMessages/' + file, (err) => {
+                        if (err) {
+                            console.error(err);
+                            return;
+                        }
+                    });
+                }
+            });
+        }
         await this.messageModel.deleteMany({ _id: id }).exec();
         const obj = {
             idMsg: msg._id,
@@ -224,6 +229,19 @@ let MessageService = class MessageService {
         };
         this.webSocketService.onMessageDeleted(obj);
         return obj;
+    }
+    async deleteForMe(object) {
+        object.operation = 'deleteForMe';
+        this.webSocketService.onMessageDeleted(object);
+        const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
+        if (msg.visiblity.length == 1) {
+            return await this.remove(object.idMsg);
+        }
+        return this.messageModel
+            .updateOne({ _id: object.idMsg }, {
+            $pull: { visiblity: object.idUser },
+        })
+            .exec();
     }
     removeAll() {
         return this.messageModel.deleteMany().exec();

@@ -43,7 +43,6 @@ export declare class MessageService {
     findAllMessageOfConv(idConv: string): Promise<(import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     })[]>;
-    deleteForMe(object: any): Promise<any>;
     getMessageSearchedGroup(idConv: string, idMessage: string, userId: string): Promise<any[]>;
     findMessageOfConv(idConv: string, idUser: string): Promise<any[]>;
     fillSenderAndRef(messages: any[]): Promise<any[]>;
@@ -61,6 +60,7 @@ export declare class MessageService {
     update(id: string, updateMessageDto: UpdateMessageDto): Promise<import("mongoose").UpdateWriteOpResult>;
     setVus(body: any): Promise<void>;
     remove(id: string): Promise<any>;
+    deleteForMe(object: any): Promise<any>;
     removeAll(): any;
     removeAllFromConv(idConv: string): any;
 }

@@ -1,4 +1,7 @@
 /* eslint-disable prettier/prettier */
+import * as fs from 'fs';
+import { Response } from 'express';
+
 import {
   Controller,
   Get,
@@ -9,6 +12,7 @@ import {
   Delete,
   UseInterceptors,
   UploadedFiles,
+  Res,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
 // import { CreateMessageDto } from './dto/create-message.dto';
@@ -39,7 +43,18 @@ export class MessageController {
   create(@Body() message: any, @UploadedFiles() files: Express.Multer.File[]) {
     return this.messageService.create(message, files);
   }
-
+  @Get('uploads/:fileId')
+  sendFile(@Param('fileId') fileId: string, @Res() res: Response) {
+    fs.access('assets/imagesOfMessages/' + fileId, fs.constants.F_OK, (err) => {
+      if (err) {
+        res.sendFile('/imagesOfMessages/deleted.png', { root: 'assets' });
+        // Handle the case where the file does not exist
+      } else {
+        res.sendFile('/imagesOfMessages/' + fileId, { root: 'assets' });
+        // Handle the case where the file exists
+      }
+    });
+  }
   @Get()
   findAll() {
     return this.messageService.findAll();

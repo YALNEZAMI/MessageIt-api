@@ -24,6 +24,7 @@
 /// <reference types="mongoose/types/virtuals" />
 /// <reference types="mongoose" />
 /// <reference types="mongoose/types/inferschematype" />
+import { Response } from 'express';
 import { MessageService } from './message.service';
 import { UpdateMessageDto } from './dto/update-message.dto';
 export declare class MessageController {
@@ -32,6 +33,7 @@ export declare class MessageController {
     create(message: any, files: Express.Multer.File[]): Promise<import("mongoose").Document<unknown, {}, import("./entities/message.entity").MessageDocument> & import("./entities/message.entity").Message & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     }>;
+    sendFile(fileId: string, res: Response): void;
     findAll(): Promise<(import("mongoose").Document<unknown, {}, import("./entities/message.entity").MessageDocument> & import("./entities/message.entity").Message & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     })[]>;

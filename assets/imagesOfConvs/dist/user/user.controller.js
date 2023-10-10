@@ -28,7 +28,7 @@ let UserController = class UserController {
     create(createUserDto) {
         return this.userService.create(createUserDto);
     }
-    login(req, email, password) {
+    login(email, password) {
         const data = {
             email: email,
             password: password,
@@ -106,11 +106,10 @@ __decorate([
 ], UserController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)('login/:email/:password'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)('email')),
-    __param(2, (0, common_1.Param)('password')),
+    __param(0, (0, common_1.Param)('email')),
+    __param(1, (0, common_1.Param)('password')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], UserController.prototype, "login", null);
 __decorate([

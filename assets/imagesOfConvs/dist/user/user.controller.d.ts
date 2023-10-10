@@ -26,7 +26,7 @@
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { UploadedFileInterface } from 'src/interfaces/photo';
 export declare class UserController {
     private readonly userService;
@@ -42,7 +42,7 @@ export declare class UserController {
             _id: import("mongoose").Types.ObjectId;
         };
     }>;
-    login(req: Request, email: string, password: string): Promise<any>;
+    login(email: string, password: string): Promise<any>;
     findAll(): Promise<(import("mongoose").Document<unknown, {}, import("./entities/user.entity").UserDocument> & import("./entities/user.entity").User & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     })[]>;

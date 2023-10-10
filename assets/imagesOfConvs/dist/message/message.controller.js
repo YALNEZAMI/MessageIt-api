@@ -13,6 +13,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessageController = void 0;
+const fs = require("fs");
 const common_1 = require("@nestjs/common");
 const message_service_1 = require("./message.service");
 const update_message_dto_1 = require("./dto/update-message.dto");
@@ -25,6 +26,16 @@ let MessageController = class MessageController {
     }
     create(message, files) {
         return this.messageService.create(message, files);
+    }
+    sendFile(fileId, res) {
+        fs.access('assets/imagesOfMessages/' + fileId, fs.constants.F_OK, (err) => {
+            if (err) {
+                res.sendFile('/imagesOfMessages/deleted.png', { root: 'assets' });
+            }
+            else {
+                res.sendFile('/imagesOfMessages/' + fileId, { root: 'assets' });
+            }
+        });
     }
     findAll() {
         return this.messageService.findAll();
@@ -87,6 +98,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", void 0)
 ], MessageController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)('uploads/:fileId'),
+    __param(0, (0, common_1.Param)('fileId')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "sendFile", null);
 __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),
