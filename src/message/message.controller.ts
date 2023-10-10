@@ -116,6 +116,10 @@ export class MessageController {
   ) {
     return this.messageService.findMessageOfConv(idConv, idUser);
   }
+  @Get('/medias/:idConv/:idUser')
+  getMedias(@Param('idConv') idConv: string, @Param('idUser') idUser: string) {
+    return this.messageService.getMedias(idConv, idUser);
+  }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateMessageDto: UpdateMessageDto) {

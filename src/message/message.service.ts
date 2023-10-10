@@ -128,6 +128,15 @@ export class MessageService {
 
     return messages;
   }
+  getMedias(idConv: string, idUser: string) {
+    return this.messageModel
+      .find({
+        conv: idConv,
+        visiblity: { $in: [idUser] },
+        files: { $exists: true, $ne: [] },
+      })
+      .exec();
+  }
   async fillSenderAndRef(messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];

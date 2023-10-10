@@ -61,6 +61,9 @@ let MessageController = class MessageController {
     findMessageOfConv(idConv, idUser) {
         return this.messageService.findMessageOfConv(idConv, idUser);
     }
+    getMedias(idConv, idUser) {
+        return this.messageService.getMedias(idConv, idUser);
+    }
     update(id, updateMessageDto) {
         return this.messageService.update(id, updateMessageDto);
     }
@@ -171,6 +174,14 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], MessageController.prototype, "findMessageOfConv", null);
+__decorate([
+    (0, common_1.Get)('/medias/:idConv/:idUser'),
+    __param(0, (0, common_1.Param)('idConv')),
+    __param(1, (0, common_1.Param)('idUser')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "getMedias", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),

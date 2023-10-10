@@ -45,6 +45,9 @@ export declare class MessageService {
     })[]>;
     getMessageSearchedGroup(idConv: string, idMessage: string, userId: string): Promise<any[]>;
     findMessageOfConv(idConv: string, idUser: string): Promise<any[]>;
+    getMedias(idConv: string, idUser: string): Promise<(import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {
+        _id: import("mongoose").Types.ObjectId;
+    })[]>;
     fillSenderAndRef(messages: any[]): Promise<any[]>;
     getRange(idConv: string, idMessage: string, userId?: string): Promise<number>;
     getMessagesByKey(key: string, idConv: string, idUser: string): Promise<(import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {

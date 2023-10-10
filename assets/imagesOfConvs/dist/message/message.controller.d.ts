@@ -50,6 +50,9 @@ export declare class MessageController {
         _id: import("mongoose").Types.ObjectId;
     })[]>;
     findMessageOfConv(idConv: string, idUser: string): Promise<any[]>;
+    getMedias(idConv: string, idUser: string): Promise<(import("mongoose").Document<unknown, {}, import("./entities/message.entity").MessageDocument> & import("./entities/message.entity").Message & import("mongoose").Document<any, any, any> & {
+        _id: import("mongoose").Types.ObjectId;
+    })[]>;
     update(id: string, updateMessageDto: UpdateMessageDto): Promise<import("mongoose").UpdateWriteOpResult>;
     setVus(body: any): Promise<void>;
     remove(id: string): Promise<any>;
