@@ -15,7 +15,7 @@ export class Message {
   @Prop({ required: false, type: Object })
   ref: any;
   @Prop({ required: false })
-  visiblity: string[];
+  visibility: string[];
   @Prop({ required: true })
   vus: string[];
   @Prop({ required: true, type: Object })

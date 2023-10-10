@@ -37,7 +37,7 @@ __decorate([
 __decorate([
     (0, mongoose_1.Prop)({ required: false }),
     __metadata("design:type", Array)
-], Message.prototype, "visiblity", void 0);
+], Message.prototype, "visibility", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", Array)

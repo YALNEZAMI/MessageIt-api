@@ -8,7 +8,7 @@ export class UpdateMessageDto extends PartialType(CreateMessageDto) {
   files?: any[];
   date?: Date;
   ref?: string;
-  visiblity?: string[];
+  visibility?: string[];
   sender?: string;
   vus?: string[];
 }

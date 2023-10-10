@@ -64,6 +64,6 @@ export declare class MessageService {
     setVus(body: any): Promise<void>;
     remove(id: string): Promise<any>;
     deleteForMe(object: any): Promise<any>;
-    removeAll(): any;
+    removeAll(): Promise<any>;
     removeAllFromConv(idConv: string): any;
 }

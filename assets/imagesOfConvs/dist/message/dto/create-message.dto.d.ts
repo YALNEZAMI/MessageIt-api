@@ -5,7 +5,7 @@ export declare class CreateMessageDto {
     files: any;
     date: Date;
     ref: string;
-    visiblity: string[];
+    visibility: string[];
     vus: string[];
     sender: string;
 }

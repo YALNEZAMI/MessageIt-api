@@ -16,7 +16,7 @@ export class CreateMessageDto {
   @Column()
   ref: string;
   @Column()
-  visiblity: string[];
+  visibility: string[];
   @Column()
   vus: string[];
 

@@ -41,7 +41,7 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", Array)
-], CreateMessageDto.prototype, "visiblity", void 0);
+], CreateMessageDto.prototype, "visibility", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", Array)
