@@ -134,6 +134,7 @@ let ConvService = class ConvService {
             conv.members = members;
             const lasMessage = await this.getLastMessage(conv._id.toString());
             conv.lastMessage = lasMessage;
+            console.log(members.length);
             if (members.length > 2) {
                 conv.name = 'Group chat';
             }

@@ -191,6 +191,8 @@ export class ConvService {
        *  the name is the name of the first person in the conversation who is not the current user
        *
        */
+      console.log(members.length);
+
       if (members.length > 2) {
         conv.name = 'Group chat';
       } else if (members.length == 1) {
