@@ -1,6 +1,9 @@
 # compiled output
 /dist
 /node_modules
+/assets/imagesOfConvs
+/assets/imagesOfMessages
+
 
 # Logs
 logs
