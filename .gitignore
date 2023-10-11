@@ -3,7 +3,7 @@
 /node_modules
 /assets/imagesOfConvs
 /assets/imagesOfMessages
-/.env
+.env
 # Logs
 logs
 *.log
