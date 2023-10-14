@@ -228,6 +228,8 @@ export class MessageService {
     return this.messageModel.updateOne({ _id: id }, updateMessageDto).exec();
   }
   async setVus(body: any) {
+    console.log(body);
+
     this.webSocketService.onSetVus(body);
     const id = body.myId;
     //set viewver as Oline
@@ -240,7 +242,28 @@ export class MessageService {
 
   async remove(id: string): Promise<any> {
     const msg = await this.messageModel.findOne({ _id: id }).exec();
-
+    const files = msg.files;
+    for (let file of files) {
+      file = file.split('/');
+      file = file[file.length - 1];
+      fs.access('assets/imagesOfMessages/' + file, fs.constants.F_OK, (err) => {
+        if (err) {
+          // Handle the case where the file does not exist
+        } else {
+          fs.unlink('assets/imagesOfMessages/' + file, (err) => {
+            if (err) {
+              console.error(err);
+              return;
+            }
+          });
+          // Handle the case where the file exists
+        }
+      });
+    }
+  }
+  async removeForAll(id: string, idUser: string): Promise<any> {
+    const msg = await this.messageModel.findOne({ _id: id }).exec();
+    if (msg.sender != idUser) return;
     const files = msg.files;
     for (let file of files) {
       file = file.split('/');
