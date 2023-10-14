@@ -14,8 +14,6 @@ export class Conv {
   @Prop({ required: false })
   description: string;
   @Prop({ required: true })
-  status: string;
-  @Prop({ required: true })
   theme: string;
   @Prop({ required: true })
   members: any[];

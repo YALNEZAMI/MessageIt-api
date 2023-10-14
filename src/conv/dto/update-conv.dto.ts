@@ -8,6 +8,5 @@ export class UpdateConvDto extends PartialType(CreateConvDto) {
   photo?: string;
   description?: string;
   members?: any[];
-  status?: string;
   theme?: string;
 }

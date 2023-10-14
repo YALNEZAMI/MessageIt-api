@@ -71,7 +71,6 @@ export class ConvService {
       return await this.findOne(exist.idConv);
     } else {
       createConvDto.photo = process.env.api_url + '/user/uploads/user.png';
-      createConvDto.status = 'online';
       const convCreated = await this.ConvModel.create(createConvDto);
       const newId = convCreated._id.toString();
       const finalConv = await this.findOne(newId);
@@ -191,12 +190,12 @@ export class ConvService {
        *  the name is the name of the first person in the conversation who is not the current user
        *
        */
-      if (members.length > 2) {
-        conv.name = 'Group chat';
-      } else if (members.length == 1) {
+
+      if (members.length == 1) {
         const me = await this.userService.findOne(id);
         conv.name = me.firstName + ' ' + me.lastName;
-      } else {
+      }
+      if (members.length == 2) {
         if ((members.length = 2)) {
           if (members[0]._id == id) {
             const friend = await this.userService.findOne(members[1]);
@@ -218,7 +217,9 @@ export class ConvService {
           }
         }
       }
-
+      if (members.length > 2 && (conv.name == undefined || conv.name == '')) {
+        conv.name = 'Group chat';
+      }
       /**
        * set the conv image,
        * if the conv is a group chat,
@@ -232,16 +233,7 @@ export class ConvService {
         const me = await this.userService.findOne(id);
         conv.photo = me.photo;
       }
-      if (members.length > 2) {
-        if (
-          conv.photo == undefined ||
-          conv.photo == null ||
-          conv.photo == ' ' ||
-          conv.photo == ''
-        ) {
-          conv.photo = process.env.api_url + '/user/uploads/group.png';
-        }
-      }
+
       if (members.length == 2) {
         if (members[0]._id == id) {
           const friend = await this.userService.findOne(members[1]);
@@ -258,6 +250,14 @@ export class ConvService {
             conv.photo = friend.photo;
           }
         }
+      }
+      if (
+        (members.length > 2 && conv.photo == undefined) ||
+        conv.photo == null ||
+        conv.photo == ' ' ||
+        conv.photo == ''
+      ) {
+        conv.photo = process.env.api_url + '/user/uploads/group.png';
       }
     }
 
@@ -446,5 +446,15 @@ export class ConvService {
     for (let i = 0; i < convs.length; i++) {
       this.leaveConv(id, convs[i]._id);
     }
+  }
+  makeGroupe(conv: any) {
+    conv.photo = process.env.api_url + '/user/uploads/group.png';
+    conv.lastMessage = null;
+    if (conv.name == '') {
+      conv.name = 'Group chat';
+    }
+    conv.description = 'Write a description...';
+    conv.theme = 'basic';
+    return this.ConvModel.create(conv);
   }
 }
