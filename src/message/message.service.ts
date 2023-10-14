@@ -44,8 +44,10 @@ export class MessageService {
       );
     }
     createMessageDto.files = filesNames;
-    const msg = await this.messageModel.create(createMessageDto);
-    msg.sender = await this.userService.findeUserForMessage(msg.sender);
+    let msg = await this.messageModel.create(createMessageDto);
+    let messages = [msg];
+    messages = await this.fillSenderAndRef(messages);
+    msg = messages[0];
     this.webSocketService.onNewMessage(msg);
     return msg;
   }
@@ -54,14 +56,15 @@ export class MessageService {
     return this.messageModel.find().exec();
   }
   async findAllMessageOfConv(idConv: string) {
-    const msgs = await this.messageModel.find({ conv: idConv }).exec();
-    for (let i = 0; i < msgs.length; i++) {
-      const msg = msgs[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    let messages = await this.messageModel.find({ conv: idConv }).exec();
+    // for (let i = 0; i < msgs.length; i++) {
+    //   const msg = msgs[i];
+    //   const user = await this.userService.findeUserForMessage(msg.sender);
+    //   msg.sender = user;
+    // }
+    messages = await this.fillSenderAndRef(messages);
 
-    return msgs;
+    return messages;
   }
 
   async getMessageSearchedGroup(
