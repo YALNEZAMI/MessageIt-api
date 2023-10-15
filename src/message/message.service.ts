@@ -228,8 +228,6 @@ export class MessageService {
     return this.messageModel.updateOne({ _id: id }, updateMessageDto).exec();
   }
   async setVus(body: any) {
-    console.log(body);
-
     this.webSocketService.onSetVus(body);
     const id = body.myId;
     //set viewver as Oline
