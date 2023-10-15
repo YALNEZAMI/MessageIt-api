@@ -9,6 +9,7 @@ import { UserService } from 'src/user/user.service';
 import { MessageService } from 'src/message/message.service';
 import * as fs from 'fs';
 import { SessionService } from 'src/session/session.service';
+import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
 //service of conversation
 @Injectable()
 export class ConvService {
@@ -19,25 +20,45 @@ export class ConvService {
     private readonly userService: UserService,
     private messageService: MessageService,
     private sessionService: SessionService,
+    private webSocketsService: WebSocketsService,
   ) {}
+  /**
+   * @Param a conversation with members ids
+   * @returns a conversation with members
+   */
+  async fillMembers(conv: any) {
+    const members: any[] = [];
+    for (let i = 0; i < conv.members.length; i++) {
+      const id = conv.members[i];
+      const user = await this.userService.findOne(id);
+      members.push(user);
+    }
+    conv.members = members;
+    return conv;
+  }
   /**
    *
    * @param id1 id of the first user
    * @param id2  id of the second user
    * @returns  true and the id of the conversation if the conversation exist between the two users, false and null if not
    */
-  async convExistBetween(id1: string, id2: string) {
+  async convExistBetween(
+    id1: string,
+    id2: string,
+  ): Promise<{
+    bool: boolean;
+    conv: any;
+  }> {
     //get all conversations
-    const allConvs = await this.ConvModel.find().exec();
+    const conv = await this.ConvModel.findOne({
+      $and: [{ members: { $in: [id1, id2] } }, { members: { $size: 2 } }],
+    }).exec();
     //iterate over the conversations to find out if there is a conversation between the two users
-    for (let i = 0; i < allConvs.length; i++) {
-      const conv = allConvs[i];
-      const members = conv.members;
-      if (members.includes(id1) && members.includes(id2)) {
-        return { bool: true, idConv: conv._id };
-      }
+    if (conv == null) {
+      return { bool: false, conv: null };
+    } else {
+      return { bool: true, conv: conv };
     }
-    return { bool: false, idConv: null };
   }
   /**
    *
@@ -68,12 +89,13 @@ export class ConvService {
     );
     //return the conversation if it exist, create a new one if not
     if (exist.bool) {
-      return await this.findOne(exist.idConv);
+      return exist.conv;
     } else {
       createConvDto.photo = process.env.api_url + '/user/uploads/user.png';
       const convCreated = await this.ConvModel.create(createConvDto);
       const newId = convCreated._id.toString();
-      const finalConv = await this.findOne(newId);
+      let finalConv = await this.findOne(newId);
+      finalConv = await this.fillMembers(finalConv);
       return finalConv;
     }
   }
@@ -456,5 +478,8 @@ export class ConvService {
     conv.description = 'Write a description...';
     conv.theme = 'basic';
     return this.ConvModel.create(conv);
+  }
+  typing(object: any) {
+    this.webSocketsService.typing(object);
   }
 }

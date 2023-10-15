@@ -37,4 +37,9 @@ export class WebSocketsService {
   onMessageDeleted(@MessageBody() id: any) {
     this.server.emit('messageDeleted', id);
   }
+  @SubscribeMessage('typing')
+  typing(@MessageBody() object: any) {
+    //object:{idConv:string,user:any}
+    this.server.emit('typing', object);
+  }
 }

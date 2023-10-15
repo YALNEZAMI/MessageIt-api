@@ -32,6 +32,11 @@ export class ConvController {
   convsOfUser(@Body() conv: any) {
     return this.convService.convOfUser(conv);
   }
+  //endpoint to handle typing event
+  @Post('/typing')
+  typing(@Body() object: any) {
+    return this.convService.typing(object);
+  }
   //endpoint to make a groupe
   @Post('/groupe')
   makeGroupe(@Body() body: any) {

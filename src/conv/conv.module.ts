@@ -7,6 +7,7 @@ import { Conv, ConvSchema } from './entities/conv.entity';
 import { UserModule } from 'src/user/user.module';
 import { MessageModule } from 'src/message/message.module';
 import { SessionModule } from 'src/session/session.module';
+import { WebSocketsModule } from 'src/web-sockets/web-sockets.module';
 //module of conversation
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { SessionModule } from 'src/session/session.module';
     UserModule,
     MessageModule,
     SessionModule,
+    WebSocketsModule,
   ],
   controllers: [ConvController],
   providers: [ConvService],

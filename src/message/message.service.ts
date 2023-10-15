@@ -44,6 +44,7 @@ export class MessageService {
       );
     }
     createMessageDto.files = filesNames;
+
     let msg = await this.messageModel.create(createMessageDto);
     let messages = [msg];
     messages = await this.fillSenderAndRef(messages);
