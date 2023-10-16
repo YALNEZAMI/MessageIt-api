@@ -44,8 +44,11 @@ export class MessageService {
       );
     }
     createMessageDto.files = filesNames;
-    const msg = await this.messageModel.create(createMessageDto);
-    msg.sender = await this.userService.findeUserForMessage(msg.sender);
+
+    let msg = await this.messageModel.create(createMessageDto);
+    let messages = [msg];
+    messages = await this.fillSenderAndRef(messages);
+    msg = messages[0];
     this.webSocketService.onNewMessage(msg);
     return msg;
   }
@@ -54,14 +57,15 @@ export class MessageService {
     return this.messageModel.find().exec();
   }
   async findAllMessageOfConv(idConv: string) {
-    const msgs = await this.messageModel.find({ conv: idConv }).exec();
-    for (let i = 0; i < msgs.length; i++) {
-      const msg = msgs[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-    }
+    let messages = await this.messageModel.find({ conv: idConv }).exec();
+    // for (let i = 0; i < msgs.length; i++) {
+    //   const msg = msgs[i];
+    //   const user = await this.userService.findeUserForMessage(msg.sender);
+    //   msg.sender = user;
+    // }
+    messages = await this.fillSenderAndRef(messages);
 
-    return msgs;
+    return messages;
   }
 
   async getMessageSearchedGroup(
@@ -237,7 +241,28 @@ export class MessageService {
 
   async remove(id: string): Promise<any> {
     const msg = await this.messageModel.findOne({ _id: id }).exec();
-
+    const files = msg.files;
+    for (let file of files) {
+      file = file.split('/');
+      file = file[file.length - 1];
+      fs.access('assets/imagesOfMessages/' + file, fs.constants.F_OK, (err) => {
+        if (err) {
+          // Handle the case where the file does not exist
+        } else {
+          fs.unlink('assets/imagesOfMessages/' + file, (err) => {
+            if (err) {
+              console.error(err);
+              return;
+            }
+          });
+          // Handle the case where the file exists
+        }
+      });
+    }
+  }
+  async removeForAll(id: string, idUser: string): Promise<any> {
+    const msg = await this.messageModel.findOne({ _id: id }).exec();
+    if (msg.sender != idUser) return;
     const files = msg.files;
     for (let file of files) {
       file = file.split('/');

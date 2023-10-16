@@ -129,9 +129,9 @@ export class MessageController {
   setVus(@Body() body: any) {
     return this.messageService.setVus(body);
   }
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.messageService.remove(id);
+  @Delete(':idMsg/:idUser')
+  removeForAll(@Param('idMsg') idMsg: string, @Param('idUser') idUser: string) {
+    return this.messageService.removeForAll(idMsg, idUser);
   }
   @Patch('delete/ForMe')
   deleteForMe(@Body() object: any) {

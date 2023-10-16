@@ -15,9 +15,7 @@ export class CreateConvDto {
   //description of the conversation if exist
   @Column()
   description: string;
-  //status of the conversation if exist
-  @Column()
-  status: string;
+
   //theme of conv
   @Column()
   theme: string;

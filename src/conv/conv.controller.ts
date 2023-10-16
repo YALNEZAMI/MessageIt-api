@@ -29,8 +29,18 @@ export class ConvController {
   }
   //endpoint to get all conversations of a user
   @Post('/ofUser')
-  convsOfUser(@Body() idUser: any) {
-    return this.convService.convOfUser(idUser);
+  convsOfUser(@Body() conv: any) {
+    return this.convService.convOfUser(conv);
+  }
+  //endpoint to handle typing event
+  @Post('/typing')
+  typing(@Body() object: any) {
+    return this.convService.typing(object);
+  }
+  //endpoint to make a groupe
+  @Post('/groupe')
+  makeGroupe(@Body() body: any) {
+    return this.convService.makeGroupe(body);
   }
   //endpoint to get all conversations
   @Get()
