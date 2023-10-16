@@ -10,7 +10,7 @@ import { config } from 'dotenv';
 config();
 @WebSocketGateway({
   cors: {
-    origin: [process.env.frontUrl], // Adjust the origin to match your Angular app's URL
+    origin: [process.env.frontUrl],
   },
 })
 export class WebSocketsService {
