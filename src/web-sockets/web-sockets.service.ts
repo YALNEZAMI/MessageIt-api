@@ -44,7 +44,10 @@ export class WebSocketsService {
   }
   @SubscribeMessage('addFriend')
   addFriend(@MessageBody() object: any) {
-    //object:{idConv:string,user:any}
     this.server.emit('addFriend', object);
+  }
+  @SubscribeMessage('cancelFriend')
+  cancelFriend(@MessageBody() object: any) {
+    this.server.emit('cancelFriend', object);
   }
 }
