@@ -42,4 +42,9 @@ export class WebSocketsService {
     //object:{idConv:string,user:any}
     this.server.emit('typing', object);
   }
+  @SubscribeMessage('addFriend')
+  addFriend(@MessageBody() object: any) {
+    //object:{idConv:string,user:any}
+    this.server.emit('addFriend', object);
+  }
 }
