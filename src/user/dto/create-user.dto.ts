@@ -13,7 +13,6 @@ export class CreateUserDto {
   email: string;
   @Column()
   password: string;
-
   @Column()
   photo: string;
   @Column()

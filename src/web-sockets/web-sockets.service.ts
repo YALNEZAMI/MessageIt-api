@@ -10,7 +10,7 @@ import { config } from 'dotenv';
 config();
 @WebSocketGateway({
   cors: {
-    origin: [process.env.frontUrl], // Adjust the origin to match your Angular app's URL
+    origin: [process.env.frontUrl],
   },
 })
 export class WebSocketsService {
@@ -41,5 +41,17 @@ export class WebSocketsService {
   typing(@MessageBody() object: any) {
     //object:{idConv:string,user:any}
     this.server.emit('typing', object);
+  }
+  @SubscribeMessage('addFriend')
+  addFriend(@MessageBody() object: any) {
+    this.server.emit('addFriend', object);
+  }
+  @SubscribeMessage('cancelFriend')
+  cancelFriend(@MessageBody() object: any) {
+    this.server.emit('cancelFriend', object);
+  }
+  @SubscribeMessage('lastMsg')
+  lastMsg(@MessageBody() msg: any) {
+    this.server.emit('lastMsg', msg);
   }
 }

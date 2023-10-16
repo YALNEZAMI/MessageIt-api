@@ -49,6 +49,9 @@ export class MessageService {
     let messages = [msg];
     messages = await this.fillSenderAndRef(messages);
     msg = messages[0];
+    //set lastmsg event to update convs last message
+    this.webSocketService.lastMsg(msg);
+    //set new message event to update convs msgs
     this.webSocketService.onNewMessage(msg);
     return msg;
   }

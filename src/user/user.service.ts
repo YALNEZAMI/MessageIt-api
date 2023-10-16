@@ -7,12 +7,14 @@ import { User, UserDocument } from './entities/user.entity';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
+import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name)
     private UserModel: Model<UserDocument>,
+    private webSocketService: WebSocketsService,
   ) {
     //set all users offline
     this.UserModel.updateMany({}, { status: 'offline' }).exec();
@@ -299,12 +301,28 @@ export class UserService {
   }
 
   //friendShip methods
-  addReq(addReq: any) {
-    return this.UserModel.updateOne(
+  async addReq(addReq: any) {
+    await this.UserModel.updateOne(
       { _id: addReq.reciever },
       {
         $addToSet: { addReqs: addReq.sender },
       },
+    );
+    const sender = await this.findConfidentialUser(addReq.sender);
+    sender.operation = 'cancel';
+    const reciever = await this.findConfidentialUser(addReq.reciever);
+    reciever.operation = 'accept';
+    //set websocket subscription to notify reciever
+    this.webSocketService.addFriend({
+      sender: sender,
+      reciever: reciever,
+    });
+    return sender;
+  }
+  async findConfidentialUser(id: string) {
+    return this.UserModel.findOne(
+      { _id: id },
+      { password: 0, email: 0, codePassword: 0, addReqs: 0 },
     );
   }
   async removeFriend(myId: string, FriendId: string) {
@@ -324,6 +342,10 @@ export class UserService {
     );
   }
   cancel(canceler: string, canceled: string) {
+    this.webSocketService.cancelFriend({
+      canceler: canceler,
+      canceled: canceled,
+    });
     return this.UserModel.updateOne(
       { _id: canceled },
       { $pull: { addReqs: canceler } },
