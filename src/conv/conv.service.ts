@@ -51,7 +51,11 @@ export class ConvService {
   }> {
     //get all conversations
     const conv = await this.ConvModel.findOne({
-      $and: [{ members: { $in: [id1, id2] } }, { members: { $size: 2 } }],
+      $and: [
+        { members: { $in: [id1] } },
+        { members: { $in: [id2] } },
+        { members: { $size: 2 } },
+      ],
     }).exec();
     //iterate over the conversations to find out if there is a conversation between the two users
     if (conv == null) {
@@ -282,6 +286,16 @@ export class ConvService {
         conv.photo = process.env.api_url + '/user/uploads/group.png';
       }
     }
+    //sort convs by the last message date
+    myConvs.sort((a: any, b: any) => {
+      if (a.lastMessage != null && b.lastMessage != null) {
+        const dateA = a.lastMessage.date;
+        const dateB = b.lastMessage.date;
+        return dateB - dateA;
+      } else {
+        return 1;
+      }
+    });
 
     return myConvs;
   }

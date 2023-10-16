@@ -50,4 +50,8 @@ export class WebSocketsService {
   cancelFriend(@MessageBody() object: any) {
     this.server.emit('cancelFriend', object);
   }
+  @SubscribeMessage('lastMsg')
+  lastMsg(@MessageBody() msg: any) {
+    this.server.emit('lastMsg', msg);
+  }
 }
