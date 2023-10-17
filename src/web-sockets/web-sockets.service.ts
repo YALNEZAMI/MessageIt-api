@@ -60,4 +60,8 @@ export class WebSocketsService {
   ) {
     this.server.emit('removeFromGroupe', object);
   }
+  @SubscribeMessage('createConv')
+  OnCreateConv(@MessageBody() conv: any) {
+    this.server.emit('createConv', conv);
+  }
 }

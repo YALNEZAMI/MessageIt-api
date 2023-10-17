@@ -30,7 +30,7 @@ export class ConvService {
     const members: any[] = [];
     for (let i = 0; i < conv.members.length; i++) {
       const id = conv.members[i];
-      const user = await this.userService.findOne(id);
+      const user = await this.userService.findConfidentialUser(id);
       members.push(user);
     }
     conv.members = members;
@@ -105,8 +105,14 @@ export class ConvService {
       }
       const convCreated = await this.ConvModel.create(createConvDto);
       const newId = convCreated._id.toString();
-      let finalConv = await this.findOne(newId);
+
+      let finalConv = await this.ConvModel.findOne({ _id: newId }, {}).exec();
       finalConv = await this.fillMembers(finalConv);
+      //set name of groupe if empty
+      // finalConv = await this.setNameAndPhoto(finalConv,createConvDto.members[0]);
+
+      //set websocket to notifiy the members of the new conversation
+      this.webSocketsService.OnCreateConv(finalConv);
       return finalConv;
     }
   }
@@ -202,13 +208,13 @@ export class ConvService {
     }
     //iterate over the convs to set the name and the image
     for (let i = 0; i < myConvs.length; i++) {
-      const conv = myConvs[i];
+      let conv = myConvs[i];
 
       //set the members
       const membersId = conv.members;
       const members = [];
       for (const memberId of membersId) {
-        const user = await this.userService.findOne(memberId);
+        const user = await this.userService.findConfidentialUser(memberId);
         if (user == null) {
           continue;
         } else {
@@ -219,98 +225,71 @@ export class ConvService {
       //set last message
       const lasMessage = await this.getLastMessage(conv._id.toString(), id);
       conv.lastMessage = lasMessage;
-
-      /**
-       * set the name,
-       * if the conv is a group chat, the name is 'Group chat',
-       * if the conv is a conversation with one person,
-       *  the name is the name of the person,
-       * if the conv is a conversation with more than one person,
-       *  the name is the name of the first person in the conversation who is not the current user
-       *
-       */
-
-      if (members.length == 1) {
-        const me = await this.userService.findOne(id);
-        conv.name = me.firstName + ' ' + me.lastName;
-      }
-      if (members.length == 2) {
-        if ((members.length = 2)) {
-          if (members[0]._id == id) {
-            const friend = await this.userService.findOne(members[1]);
-
-            if (friend != null) {
-              conv.name = friend.firstName + ' ' + friend.lastName;
-            } else {
-              const me = await this.userService.findOne(id);
-              conv.name = me.firstName + ' ' + me.lastName;
-            }
-          } else {
-            const friend = await this.userService.findOne(members[0]);
-            if (friend != null) {
-              conv.name = friend.firstName + ' ' + friend.lastName;
-            } else {
-              const me = await this.userService.findOne(id);
-              conv.name = me.firstName + ' ' + me.lastName;
-            }
-          }
-        }
-      }
-      if (members.length > 2 && (conv.name == undefined || conv.name == '')) {
-        conv.name = 'Group chat';
-      }
-      /**
-       * set the conv image,
-       * if the conv is a group chat,
-       * the image is 'assets/images/group.png',
-       * if the conv is a conversation with one person,
-       * the image is the image of the person,
-       * if the conv is a conversation with more than one person,
-       * the image is the image of the first person in the conversation who is not the current user
-       */
-      if (members.length == 1) {
-        const me = await this.userService.findOne(id);
-        conv.photo = me.photo;
-      }
-
-      if (members.length == 2) {
-        if (members[0]._id == id) {
-          const friend = await this.userService.findOne(members[1]);
-          if (friend == null || friend.photo == undefined) {
-            conv.photo = ' ';
-          } else {
-            conv.photo = friend.photo;
-          }
-        } else {
-          const friend = await this.userService.findOne(members[0]);
-          if (friend == null || friend.photo == undefined) {
-            conv.photo = ' ';
-          } else {
-            conv.photo = friend.photo;
-          }
-        }
-      }
-      if (
-        (members.length > 2 && conv.photo == undefined) ||
-        conv.photo == null ||
-        conv.photo == ' ' ||
-        conv.photo == ''
-      ) {
-        conv.photo = process.env.api_url + '/user/uploads/group.png';
-      }
+      conv = await this.setNameAndPhoto(conv, id);
     }
     //sort convs by the last message date
+
+    myConvs.sort((a: any, b: any) => {
+      let aDate = a.createdAt;
+      let bDate = b.createdAt;
+      if (a.lastMessage != null && a != undefined) {
+        aDate = a.lastMessage.date;
+      }
+      if (b.lastMessage != null && b != undefined) {
+        bDate = b.lastMessage.date;
+      }
+      return bDate - aDate;
+    });
+    //sort new convs
     myConvs.sort((a: any, b: any) => {
       if (a.lastMessage != null && b.lastMessage != null) {
         const dateA = a.lastMessage.date;
         const dateB = b.lastMessage.date;
         return dateB - dateA;
       } else {
-        return 1;
+        return -1;
       }
     });
 
     return myConvs;
+  }
+  /**
+   * @param conv
+   * @return conv with name and image adapted to the user
+   */
+  async setNameAndPhoto(conv: any, id: string) {
+    const me = await this.userService.findOne(id);
+
+    if (conv.members.length == 1) {
+      conv.name = me.firstName + ' ' + me.lastName;
+      conv.photo = me.photo;
+    }
+    if (conv.members.length == 2) {
+      if ((conv.members.length = 2)) {
+        if (conv.members[0]._id == id) {
+          const friend = await this.userService.findOne(conv.members[1]);
+
+          if (friend != null) {
+            conv.name = friend.firstName + ' ' + friend.lastName;
+            conv.photo = friend.photo;
+          } else {
+            conv.name = me.firstName + ' ' + me.lastName;
+            conv.photo = me.photo;
+          }
+        } else {
+          const friend = await this.userService.findOne(conv.members[0]);
+          if (friend != null) {
+            conv.name = friend.firstName + ' ' + friend.lastName;
+            conv.photo = friend.photo;
+          } else {
+            conv.photo = me.photo;
+            conv.name = me.firstName + ' ' + me.lastName;
+          }
+        }
+      }
+    }
+
+    return conv;
   }
   /**
    *
@@ -357,6 +336,7 @@ export class ConvService {
    */
   async findOne(id: string) {
     const conv = await this.ConvModel.findOne({ _id: id }).exec();
+    if (conv == null) return null;
     const members: any = conv.members;
 
     //set name
@@ -396,7 +376,8 @@ export class ConvService {
    */
   async update(id: string, updateConvDto: UpdateConvDto) {
     await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
-    const conv = await this.findOne(id);
+    let conv = await this.findOne(id);
+    conv = await this.fillMembers(conv);
     return conv;
   }
   /**

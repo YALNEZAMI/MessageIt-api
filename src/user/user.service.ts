@@ -138,19 +138,7 @@ export class UserService {
 
     return user;
   }
-  async findeUserForMessage(id: string) {
-    const res = await this.UserModel.findById(
-      id,
-      {
-        firstName: 1,
-        lastName: 1,
-        photo: 1,
-      },
-      { password: 0, email: 0 },
-    ).exec();
 
-    return res;
-  }
   async getUserByEmail(email: string) {
     email = email.toLowerCase();
     return await this.UserModel.findOne({ email: email }).exec();
@@ -322,7 +310,7 @@ export class UserService {
   async findConfidentialUser(id: string) {
     return this.UserModel.findOne(
       { _id: id },
-      { password: 0, email: 0, codePassword: 0, addReqs: 0 },
+      { password: 0, email: 0, codePassword: 0, addReqs: 0, friends: 0 },
     );
   }
   async removeFriend(myId: string, FriendId: string) {

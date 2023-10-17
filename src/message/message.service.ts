@@ -151,12 +151,12 @@ export class MessageService {
   async fillSenderAndRef(messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
+      const user = await this.userService.findConfidentialUser(msg.sender);
       msg.sender = user;
       if (msg.ref != '') {
         const repMsg = await this.messageModel.findById(msg.ref);
         msg.ref = repMsg;
-        const senderRef = await this.userService.findeUserForMessage(
+        const senderRef = await this.userService.findConfidentialUser(
           msg.ref.sender,
         );
         msg.ref.sender = senderRef;

@@ -21,6 +21,8 @@ export class Conv {
   type: string; //groupe or private
   @Prop({ required: false })
   admins: any[];
+  @Prop({ required: true })
+  createdAt: Date;
 }
 export const ConvSchema = SchemaFactory.createForClass(Conv);
 export type ConvDocument = Conv & Document;
