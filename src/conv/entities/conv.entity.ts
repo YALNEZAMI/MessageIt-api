@@ -17,6 +17,10 @@ export class Conv {
   theme: string;
   @Prop({ required: true })
   members: any[];
+  @Prop({ required: true })
+  type: string; //groupe or private
+  @Prop({ required: false })
+  admins: any[];
 }
 export const ConvSchema = SchemaFactory.createForClass(Conv);
 export type ConvDocument = Conv & Document;

@@ -20,6 +20,7 @@ export class MessageService {
   ) {}
   async create(object: any, files: any) {
     const createMessageDto: CreateMessageDto = JSON.parse(object.message);
+    console.log(createMessageDto);
 
     //set visibility
     createMessageDto.visibility = [];

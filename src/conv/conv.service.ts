@@ -96,6 +96,13 @@ export class ConvService {
       return exist.conv;
     } else {
       createConvDto.photo = process.env.api_url + '/user/uploads/user.png';
+      //set type
+      if (createConvDto.members.length > 2) {
+        createConvDto.type = 'groupe';
+      } else {
+        createConvDto.type = 'private';
+        createConvDto.admins = [];
+      }
       const convCreated = await this.ConvModel.create(createConvDto);
       const newId = convCreated._id.toString();
       let finalConv = await this.findOne(newId);
@@ -173,7 +180,10 @@ export class ConvService {
       return null;
     } else {
       //return the last message
-      return visibleMessages[visibleMessages.length - 1];
+      const lastMsg = visibleMessages[visibleMessages.length - 1];
+      const sender = await this.userService.findOne(lastMsg.sender);
+      lastMsg.sender = sender;
+      return lastMsg;
     }
   }
   /**
@@ -473,7 +483,10 @@ export class ConvService {
     if (members.length == 0) {
       return this.remove(idConv);
     } else {
-      return await this.update(conv._id, { members: members });
+      return await this.update(conv._id, {
+        members: members,
+        admins: [members[0]],
+      });
     }
   }
   /**
@@ -498,5 +511,21 @@ export class ConvService {
   }
   typing(object: any) {
     this.webSocketsService.typing(object);
+  }
+  async removeFromGroupe(idUser: string, idAdmin: string, idConv: string) {
+    const conv = await this.findOne(idConv);
+    if (conv.admins.includes(idAdmin)) {
+      await this.ConvModel.updateOne(
+        { _id: idConv },
+        { $pull: { members: idUser } },
+      ).exec();
+      conv.members.splice(conv.members.indexOf(idUser), 1);
+      //set websocket notif
+      this.webSocketsService.onRemoveFromGroupe({
+        idUser: idUser,
+        idConv: idConv,
+      });
+      return conv;
+    }
   }
 }

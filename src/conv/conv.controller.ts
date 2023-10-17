@@ -110,4 +110,12 @@ export class ConvController {
   leave(@Param('myId') id: string, @Param('idConv') idConv: string) {
     return this.convService.leaveConv(id, idConv);
   }
+  @Delete('/removeFromGroupe/:idUser/:idAdmin/:idConv')
+  removeFromGroupe(
+    @Param('idUser') idUser: string,
+    @Param('idAdmin') idAdmin: string,
+    @Param('idConv') idConv: string,
+  ) {
+    return this.convService.removeFromGroupe(idUser, idAdmin, idConv);
+  }
 }

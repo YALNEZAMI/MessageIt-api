@@ -54,4 +54,10 @@ export class WebSocketsService {
   lastMsg(@MessageBody() msg: any) {
     this.server.emit('lastMsg', msg);
   }
+  @SubscribeMessage('removeFromGroupe')
+  onRemoveFromGroupe(
+    @MessageBody() object: { idUser: string; idConv: string },
+  ) {
+    this.server.emit('removeFromGroupe', object);
+  }
 }
