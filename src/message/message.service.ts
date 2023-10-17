@@ -55,7 +55,11 @@ export class MessageService {
     this.webSocketService.onNewMessage(msg);
     return msg;
   }
-
+  getVisibleMessages(idConv: string, idUser: string) {
+    return this.messageModel
+      .find({ conv: idConv, visibility: { $in: [idUser] } })
+      .exec();
+  }
   findAll() {
     return this.messageModel.find().exec();
   }
