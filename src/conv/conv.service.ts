@@ -93,6 +93,7 @@ export class ConvService {
     );
     //return the conversation if it exist, create a new one if not
     if (exist.bool) {
+      exist.conv = await this.fillMembers(exist.conv);
       return exist.conv;
     } else {
       createConvDto.photo = process.env.api_url + '/user/uploads/user.png';
