@@ -55,9 +55,7 @@ export class WebSocketsService {
     this.server.emit('lastMsg', msg);
   }
   @SubscribeMessage('removeFromGroupe')
-  onRemoveFromGroupe(
-    @MessageBody() object: { idUser: string; idConv: string },
-  ) {
+  onRemoveFromGroupe(@MessageBody() object: { idUser: string; conv: any }) {
     this.server.emit('removeFromGroupe', object);
   }
   @SubscribeMessage('createConv')
@@ -67,5 +65,9 @@ export class WebSocketsService {
   @SubscribeMessage('addMemberToGroupe')
   onAddMemberToGroupe(@MessageBody() convAndNewMembers: any) {
     this.server.emit('addMemberToGroupe', convAndNewMembers);
+  }
+  @SubscribeMessage('leaveConv')
+  onLeavingConv(@MessageBody() message: { conv: any; leaver: any }) {
+    this.server.emit('leaveConv', message);
   }
 }

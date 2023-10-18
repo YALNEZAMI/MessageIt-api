@@ -260,33 +260,32 @@ export class ConvService {
    * @return conv with name and image adapted to the user
    */
   async setNameAndPhoto(conv: any, id: string) {
+    if (conv.type == 'groupe') return conv;
     const me = await this.userService.findOne(id);
 
     if (conv.members.length == 1) {
       conv.name = me.firstName + ' ' + me.lastName;
       conv.photo = me.photo;
     }
-    if (conv.members.length == 2) {
-      if ((conv.members.length = 2)) {
-        if (conv.members[0]._id == id) {
-          const friend = await this.userService.findOne(conv.members[1]);
+    if ((conv.members.length = 2)) {
+      if (conv.members[0]._id == id) {
+        const friend = await this.userService.findOne(conv.members[1]);
 
-          if (friend != null) {
-            conv.name = friend.firstName + ' ' + friend.lastName;
-            conv.photo = friend.photo;
-          } else {
-            conv.name = me.firstName + ' ' + me.lastName;
-            conv.photo = me.photo;
-          }
+        if (friend != null) {
+          conv.name = friend.firstName + ' ' + friend.lastName;
+          conv.photo = friend.photo;
         } else {
-          const friend = await this.userService.findOne(conv.members[0]);
-          if (friend != null) {
-            conv.name = friend.firstName + ' ' + friend.lastName;
-            conv.photo = friend.photo;
-          } else {
-            conv.photo = me.photo;
-            conv.name = me.firstName + ' ' + me.lastName;
-          }
+          conv.name = me.firstName + ' ' + me.lastName;
+          conv.photo = me.photo;
+        }
+      } else {
+        const friend = await this.userService.findOne(conv.members[0]);
+        if (friend != null) {
+          conv.name = friend.firstName + ' ' + friend.lastName;
+          conv.photo = friend.photo;
+        } else {
+          conv.photo = me.photo;
+          conv.name = me.firstName + ' ' + me.lastName;
         }
       }
     }
@@ -460,17 +459,28 @@ export class ConvService {
    * @returns  the conversation deleted if the user is the last member, the conversation updated if not
    */
   async leaveConv(id: string, idConv: string): Promise<any> {
-    //TODO ws leave conv
-    const conv = await this.findOne(idConv);
+    let conv = await this.findOne(idConv);
     const members = conv.members;
     members.splice(members.indexOf(id), 1);
     if (members.length == 0) {
       return this.remove(idConv);
     } else {
-      return await this.update(conv._id, {
+      await this.update(conv._id, {
         members: members,
         admins: [members[0]],
       });
+      //set updated members of the conversation
+      conv.members = members;
+
+      conv = await this.fillMembers(conv);
+      conv = await this.setNameAndPhoto(conv, id);
+      //set websocket to notify the members of the new members
+      const leaver = this.userService.findConfidentialUser(id);
+      this.webSocketsService.onLeavingConv({
+        conv: conv,
+        leaver: leaver,
+      });
+      return conv;
     }
   }
   /**
@@ -497,7 +507,7 @@ export class ConvService {
     this.webSocketsService.typing(object);
   }
   async removeFromGroupe(idUser: string, idAdmin: string, idConv: string) {
-    const conv = await this.findOne(idConv);
+    let conv = await this.findOne(idConv);
     if (conv.admins.includes(idAdmin)) {
       await this.ConvModel.updateOne(
         { _id: idConv },
@@ -506,10 +516,12 @@ export class ConvService {
       ).exec();
 
       conv.members.splice(conv.members.indexOf(idUser), 1);
+      //set members
+      conv = await this.fillMembers(conv);
       //set websocket notif
       this.webSocketsService.onRemoveFromGroupe({
         idUser: idUser,
-        idConv: idConv,
+        conv: conv,
       });
       return conv;
     }
