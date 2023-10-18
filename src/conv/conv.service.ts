@@ -460,6 +460,7 @@ export class ConvService {
    * @returns  the conversation deleted if the user is the last member, the conversation updated if not
    */
   async leaveConv(id: string, idConv: string): Promise<any> {
+    //TODO ws leave conv
     const conv = await this.findOne(idConv);
     const members = conv.members;
     members.splice(members.indexOf(id), 1);
@@ -476,7 +477,7 @@ export class ConvService {
    * to use when a user delete his account
    * @param id the id of the user
    */
-  async leaveAllConv(id: string): Promise<any> {
+  async leaveAll(id: string): Promise<any> {
     const convs = await this.convOfUser(id);
     for (let i = 0; i < convs.length; i++) {
       this.leaveConv(id, convs[i]._id);
