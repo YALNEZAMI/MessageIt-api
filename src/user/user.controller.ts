@@ -152,4 +152,9 @@ export class UserController {
   getMyFriends(@Param('id') id: string) {
     return this.userService.getMyFriends(id);
   }
+  //     return this.Http.get(`${this.uri}/user/friendsToAdd/${this.getMyId()}/${this.getThisConv()._id}`);
+  @Post('friendsToAdd/:idUser')
+  friendsToAdd(@Param('idUser') idUser: string, @Body() members: string[]) {
+    return this.userService.friendsToAdd(idUser, members);
+  }
 }

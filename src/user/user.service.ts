@@ -406,4 +406,16 @@ export class UserService {
     res = await this.addOptionsToUsers(res, id);
     return res;
   }
+  async friendsToAdd(idUser: string, members: string[]) {
+    let friends = await this.UserModel.find(
+      { friends: { $in: [idUser] } },
+      { password: 0, email: 0, codePassword: 0, addReqs: 0, friends: 0 },
+    ).exec();
+    //keep only friends that are not members of the conv
+    friends = friends.filter((friend) => {
+      return !members.includes(friend._id.toString());
+    });
+
+    return friends;
+  }
 }

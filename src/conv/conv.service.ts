@@ -117,6 +117,7 @@ export class ConvService {
       return finalConv;
     }
   }
+
   /**
    *
    * @param users users to add the option
@@ -500,7 +501,9 @@ export class ConvService {
       await this.ConvModel.updateOne(
         { _id: idConv },
         { $pull: { members: idUser } },
+        // { multi: true },
       ).exec();
+
       conv.members.splice(conv.members.indexOf(idUser), 1);
       //set websocket notif
       this.webSocketsService.onRemoveFromGroupe({
@@ -509,5 +512,37 @@ export class ConvService {
       });
       return conv;
     }
+  }
+  /**
+   * @param id the id of the conversation
+   * @param members the members to add
+   * @returns the conversation updated
+   */
+  async addMembers(id: string, members: string[]) {
+    const conv = await this.findOne(id);
+    const initialMembers = conv.members;
+    const set = new Set();
+    //set initial members
+    for (const member of initialMembers) {
+      set.add(member);
+    }
+    //add new members
+    for (const member of members) {
+      set.add(member);
+    }
+
+    await this.ConvModel.updateOne(
+      { _id: id },
+      { members: Array.from(set) },
+    ).exec();
+    let finalConv = await this.findOne(id);
+    finalConv = await this.fillMembers(finalConv);
+    //set websocket to notify the members of the new members
+    const convAndNewMembers = {
+      conv: finalConv,
+      members: members,
+    };
+    this.webSocketsService.onAddMemberToGroupe(convAndNewMembers);
+    return finalConv;
   }
 }

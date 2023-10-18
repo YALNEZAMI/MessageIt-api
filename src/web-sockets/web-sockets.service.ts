@@ -64,4 +64,8 @@ export class WebSocketsService {
   OnCreateConv(@MessageBody() conv: any) {
     this.server.emit('createConv', conv);
   }
+  @SubscribeMessage('addMemberToGroupe')
+  onAddMemberToGroupe(@MessageBody() convAndNewMembers: any) {
+    this.server.emit('addMemberToGroupe', convAndNewMembers);
+  }
 }
