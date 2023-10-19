@@ -70,4 +70,12 @@ export class WebSocketsService {
   onLeavingConv(@MessageBody() message: { conv: any; leaver: any }) {
     this.server.emit('leaveConv', message);
   }
+  @SubscribeMessage('recievedMessage')
+  onRecievedMessage(@MessageBody() message: any) {
+    this.server.emit('recievedMessage', message);
+  }
+  @SubscribeMessage('login')
+  login(@MessageBody() user: any) {
+    this.server.emit('login', user);
+  }
 }

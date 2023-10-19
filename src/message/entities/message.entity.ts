@@ -20,6 +20,8 @@ export class Message {
   vus: string[];
   @Prop({ required: true, type: Object })
   sender: any;
+  @Prop({ required: false })
+  recievedBy: string[];
 }
 export const MessageSchema = SchemaFactory.createForClass(Message);
 export type MessageDocument = Message & Document;

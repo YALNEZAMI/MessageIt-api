@@ -19,7 +19,8 @@ export class CreateMessageDto {
   visibility: string[];
   @Column()
   vus: string[];
-
   @Column()
   sender: string;
+  @Column()
+  recievedBy: string[];
 }

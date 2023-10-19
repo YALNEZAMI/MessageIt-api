@@ -165,6 +165,9 @@ export class UserService {
           }
         }, 305000);
         await this.update(user._id, { lastConnection: new Date() });
+        //set websocket subscription to notify friends
+        const confidentielUser = await this.findConfidentialUser(user._id);
+        this.webSocketService.login(confidentielUser);
         return { status: 200, message: 'Success, you can login !', user: user };
       } else {
         return { status: 500, message: 'Password incorrect' };

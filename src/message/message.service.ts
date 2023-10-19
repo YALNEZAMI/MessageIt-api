@@ -74,7 +74,27 @@ export class MessageService {
 
     return messages;
   }
+  async setRecievedBy(body: { idReciever: string; idMessage: string }) {
+    await this.messageModel
+      .updateOne(
+        { _id: body.idMessage },
+        { $addToSet: { recievedBy: body.idReciever } },
+      )
+      .exec();
+    const message = await this.messageModel.findById(body.idMessage).exec();
+    //set recievedBy event to update convs msgs
+    this.webSocketService.onRecievedMessage(message);
+    //set sender
+    message.sender = await this.userService.findConfidentialUser(
+      message.sender,
+    );
+    //set ref
+    if (message.ref != '' && message.ref != null && message.ref != undefined) {
+      message.ref = await this.messageModel.findById(message.ref);
+    }
 
+    return message;
+  }
   async getMessageSearchedGroup(
     idConv: string,
     idMessage: string,
@@ -235,7 +255,7 @@ export class MessageService {
   update(id: string, updateMessageDto: UpdateMessageDto) {
     return this.messageModel.updateOne({ _id: id }, updateMessageDto).exec();
   }
-  async setVus(body: any) {
+  async setVus(body: { myId: string; idConv: string }) {
     this.webSocketService.onSetVus(body);
     const id = body.myId;
     //set viewver as Oline

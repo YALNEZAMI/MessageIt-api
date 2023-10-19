@@ -225,8 +225,19 @@ export class ConvService {
       }
       conv.members = members;
       //set last message
-      const lasMessage = await this.getLastMessage(conv._id.toString(), id);
-      conv.lastMessage = lasMessage;
+      const lastMessage = await this.getLastMessage(conv._id.toString(), id);
+      //set last message as recieved
+      if (lastMessage != null) {
+        const lastMessageFinal = await this.messageService.setRecievedBy({
+          idReciever: id,
+          idMessage: lastMessage._id.toString(),
+        });
+
+        conv.lastMessage = lastMessageFinal;
+        //set notif web socket
+        this.webSocketsService.onRecievedMessage(lastMessageFinal);
+      }
+
       conv = await this.setNameAndPhoto(conv, id);
     }
     //sort convs by the last message date
