@@ -230,27 +230,12 @@ export class ConvService {
       conv = await this.setNameAndPhoto(conv, id);
     }
     //sort convs by the last message date
+    myConvs.sort((a: any, b: any) => {
+      // Get the last message date, or createdAt if there's no last message
+      const aDate = a.lastMessage ? a.lastMessage.date : a.createdAt;
+      const bDate = b.lastMessage ? b.lastMessage.date : b.createdAt;
 
-    myConvs.sort((a: any, b: any) => {
-      let aDate = a.createdAt;
-      let bDate = b.createdAt;
-      if (a.lastMessage != null && a != undefined) {
-        aDate = a.lastMessage.date;
-      }
-      if (b.lastMessage != null && b != undefined) {
-        bDate = b.lastMessage.date;
-      }
       return bDate - aDate;
-    });
-    //sort new convs
-    myConvs.sort((a: any, b: any) => {
-      if (a.lastMessage != null && b.lastMessage != null) {
-        const dateA = a.lastMessage.date;
-        const dateB = b.lastMessage.date;
-        return dateB - dateA;
-      } else {
-        return -1;
-      }
     });
 
     return myConvs;
@@ -534,6 +519,7 @@ export class ConvService {
   async addMembers(id: string, members: string[]) {
     const conv = await this.findOne(id);
     const initialMembers = conv.members;
+    //use set to avoid duplicates
     const set = new Set();
     //set initial members
     for (const member of initialMembers) {
