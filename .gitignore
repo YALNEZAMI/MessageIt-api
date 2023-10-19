@@ -3,7 +3,7 @@
 /node_modules
 /assets/imagesOfConvs
 /assets/imagesOfMessages
-
+.env
 # Logs
 logs
 *.log
@@ -36,4 +36,3 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-.env
