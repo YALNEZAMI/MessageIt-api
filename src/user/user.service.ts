@@ -145,33 +145,44 @@ export class UserService {
   }
 
   async login(data: any): Promise<any> {
-    data.password = data.password.trim();
-    const userExist = await this.userAlreadyExist(data.email);
-    if (!userExist) {
-      return { status: 501, message: 'Please verify your email !' };
-    } else {
-      const user = await this.getUserByEmail(data.email);
-      const matchPassword = await bcrypt.compare(data.password, user.password);
-      if (matchPassword) {
-        delete user.password;
-        user.password = '';
-        //set as online
-        setTimeout(async () => {
-          const lastConnection: any = user.lastConnection;
-          const now: any = new Date();
-          const diff = now - lastConnection;
-          if (diff > 300000) {
-            await this.update(user._id, { status: 'offline' });
-          }
-        }, 305000);
-        await this.update(user._id, { lastConnection: new Date() });
-        //set websocket subscription to notify friends
-        const confidentielUser = await this.findConfidentialUser(user._id);
-        this.webSocketService.login(confidentielUser);
-        return { status: 200, message: 'Success, you can login !', user: user };
+    try {
+      data.password = data.password.trim();
+      const userExist = await this.userAlreadyExist(data.email);
+      if (!userExist) {
+        return { status: 501, message: 'Please verify your email !' };
       } else {
-        return { status: 500, message: 'Password incorrect' };
+        const user = await this.getUserByEmail(data.email);
+        const matchPassword = await bcrypt.compare(
+          data.password,
+          user.password,
+        );
+        if (matchPassword) {
+          delete user.password;
+          user.password = '';
+          //set as online
+          setTimeout(async () => {
+            const lastConnection: any = user.lastConnection;
+            const now: any = new Date();
+            const diff = now - lastConnection;
+            if (diff > 300000) {
+              await this.update(user._id, { status: 'offline' });
+            }
+          }, 305000);
+          await this.update(user._id, { lastConnection: new Date() });
+          //set websocket subscription to notify friends
+          const confidentielUser = await this.findConfidentialUser(user._id);
+          this.webSocketService.login(confidentielUser);
+          return {
+            status: 200,
+            message: 'Success, you can login !',
+            user: user,
+          };
+        } else {
+          return { status: 500, message: 'Password incorrect' };
+        }
       }
+    } catch (error) {
+      return { status: 501, message: 'Please close the app and retry !' };
     }
   }
 
