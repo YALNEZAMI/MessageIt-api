@@ -135,7 +135,6 @@ export class MessageController {
   }
   @Delete('/:idMsg/:idUser')
   removeForAll(@Param('idMsg') idMsg: string, @Param('idUser') idUser: string) {
-    console.log('removeAll');
     return this.messageService.removeForAll(idMsg, idUser);
   }
   @Patch('/delete/ForMe')

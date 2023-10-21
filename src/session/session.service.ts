@@ -19,10 +19,7 @@ export class SessionService {
       status: 'online',
       lastConnection: new Date(),
     });
-    const res = await this.userService.findOne(id);
-    delete res.password;
-    delete res.email;
-    delete res.codePassword;
+    const res = await this.userService.findConfidentialUser(id);
     return res;
   }
   setStatusMannualy(id: string, body: any) {
