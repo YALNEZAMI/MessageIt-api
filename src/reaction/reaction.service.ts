@@ -22,6 +22,9 @@ export class ReactionService {
   async create(createReactionDto: CreateReactionDto): Promise<any> {
     //set websocket of reaction
     this.webSocketService.reaction(createReactionDto);
+    //reset user and message to strings ids
+    createReactionDto.user = createReactionDto.user._id;
+    createReactionDto.message = createReactionDto.message._id;
     const check: any = await this.alreadyReacted(
       createReactionDto.message,
       createReactionDto.user,

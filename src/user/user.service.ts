@@ -57,9 +57,8 @@ export class UserService {
     createUserDto.lastConnection = new Date();
     createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
     createUserDto.photo = process.env.api_url + '/user/uploads/user.png';
-    const user = await this.UserModel.create(createUserDto);
-    delete user.password;
-    user.password = '';
+    const userCreated = await this.UserModel.create(createUserDto);
+    const user = await this.findConfidentialUser(userCreated._id);
     return {
       status: 200,
       message: 'Success, you can login now !',

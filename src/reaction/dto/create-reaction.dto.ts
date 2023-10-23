@@ -8,7 +8,7 @@ export class CreateReactionDto {
   @Column()
   type: string;
   @Column()
-  user: string;
+  user: any;
   @Column()
-  message: string;
+  message: any;
 }
