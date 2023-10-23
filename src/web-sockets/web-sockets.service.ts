@@ -78,4 +78,8 @@ export class WebSocketsService {
   login(@MessageBody() user: any) {
     this.server.emit('login', user);
   }
+  @SubscribeMessage('reaction')
+  reaction(@MessageBody() reaction: any) {
+    this.server.emit('reaction', reaction);
+  }
 }

@@ -7,6 +7,7 @@ import { Message, MessageSchema } from './entities/message.entity';
 import { UserModule } from 'src/user/user.module';
 import { WebSocketsModule } from 'src/web-sockets/web-sockets.module';
 import { SessionModule } from 'src/session/session.module';
+import { ReactionModule } from 'src/reaction/reaction.module';
 
 @Module({
   exports: [MessageService],
@@ -14,6 +15,7 @@ import { SessionModule } from 'src/session/session.module';
     SessionModule,
     WebSocketsModule,
     UserModule,
+    ReactionModule,
     MongooseModule.forFeature([
       {
         name: Message.name,

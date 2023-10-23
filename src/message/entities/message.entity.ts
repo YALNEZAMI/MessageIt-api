@@ -22,6 +22,8 @@ export class Message {
   sender: any;
   @Prop({ required: false })
   recievedBy: string[];
+  @Prop({ required: false })
+  reactions: string[];
 }
 export const MessageSchema = SchemaFactory.createForClass(Message);
 export type MessageDocument = Message & Document;

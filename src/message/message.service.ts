@@ -9,6 +9,7 @@ import { UserService } from 'src/user/user.service';
 import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
 import { SessionService } from 'src/session/session.service';
 import * as fs from 'fs';
+import { ReactionService } from 'src/reaction/reaction.service';
 @Injectable()
 export class MessageService {
   constructor(
@@ -17,6 +18,7 @@ export class MessageService {
     private userService: UserService,
     private sessionService: SessionService,
     private webSocketService: WebSocketsService,
+    private reactionService: ReactionService,
   ) {}
   async create(object: any, files: any) {
     const createMessageDto: CreateMessageDto = JSON.parse(object.message);
@@ -47,7 +49,7 @@ export class MessageService {
 
     let msg = await this.messageModel.create(createMessageDto);
     let messages = [msg];
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
     msg = messages[0];
     //set lastmsg event to update convs last message
     this.webSocketService.lastMsg(msg);
@@ -70,7 +72,7 @@ export class MessageService {
     //   const user = await this.userService.findeUserForMessage(msg.sender);
     //   msg.sender = user;
     // }
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
 
     return messages;
   }
@@ -129,7 +131,7 @@ export class MessageService {
 
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
     return messages;
   }
   async findMessageOfConv(idConv: string, idUser: string) {
@@ -154,7 +156,7 @@ export class MessageService {
     }
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
 
     return messages;
   }
@@ -167,11 +169,13 @@ export class MessageService {
       })
       .exec();
   }
-  async fillSenderAndRef(messages: any[]) {
+  async fillFields(messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
+      //set user
       const user = await this.userService.findConfidentialUser(msg.sender);
       msg.sender = user;
+      //set ref
       if (msg.ref != '') {
         const repMsg = await this.messageModel.findById(msg.ref);
         msg.ref = repMsg;
@@ -180,6 +184,17 @@ export class MessageService {
         );
         msg.ref.sender = senderRef;
       }
+      //set reactions
+      const reactions = await this.reactionService.findAllOfMessage(
+        msg._id.toString(),
+      );
+      for (let r = 0; r < reactions.length; r++) {
+        const reaction: any = reactions[r];
+        reaction.user = await this.userService.findConfidentialUser(
+          reaction.user,
+        );
+      }
+      msg.reactions = reactions;
     }
     return messages;
   }
@@ -200,7 +215,7 @@ export class MessageService {
       .exec();
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
 
     return messages;
   }
@@ -226,7 +241,7 @@ export class MessageService {
       .exec();
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
 
     return messages;
   }
@@ -247,7 +262,8 @@ export class MessageService {
       .exec();
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+    //TODO :change fillFields by by adding fill reaction
+    messages = await this.fillFields(messages);
 
     return messages;
   }
@@ -286,6 +302,10 @@ export class MessageService {
         }
       });
     }
+    //delete reactions
+    await this.reactionService.removeAllOfMsg(id);
+    //delete message
+    return await this.messageModel.deleteOne({ _id: id }).exec();
   }
   async removeForAll(id: string, idUser: string): Promise<any> {
     const msg = await this.messageModel.findOne({ _id: id }).exec();
@@ -308,6 +328,9 @@ export class MessageService {
         }
       });
     }
+    //delete reactions
+    await this.reactionService.removeAllOfMsg(id);
+    //delete message
     await this.messageModel.deleteMany({ _id: id }).exec();
     //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
 
