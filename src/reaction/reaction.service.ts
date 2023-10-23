@@ -14,32 +14,38 @@ export class ReactionService {
     private reactionModel: Model<ReactionDocument>,
     private webSocketService: WebSocketsService,
   ) {}
-  alreadyReacted(messageId: string, userId: string) {
-    return this.reactionModel
+  async alreadyReacted(messageId: string, userId: string) {
+    return await this.reactionModel
       .findOne({ message: messageId, user: userId })
       .exec();
   }
   async create(createReactionDto: CreateReactionDto): Promise<any> {
-    //set websocket of reaction
-    this.webSocketService.reaction(createReactionDto);
-    //reset user and message to strings ids
-    createReactionDto.user = createReactionDto.user._id;
-    createReactionDto.message = createReactionDto.message._id;
     const check: any = await this.alreadyReacted(
-      createReactionDto.message,
-      createReactionDto.user,
+      createReactionDto.message._id,
+      createReactionDto.user._id,
     );
     if (check != null) {
+      //reaction already exists
       if (createReactionDto.type == check.type) {
+        //reaction is to delete
+        //set websocket of reaction
+        createReactionDto.type = 'none';
+        this.webSocketService.reaction(createReactionDto);
         return this.reactionModel
-          .deleteOne({
-            message: createReactionDto.message,
-            user: createReactionDto.user,
+          .deleteMany({
+            message: createReactionDto.message._id,
+            user: createReactionDto.user._id,
           })
           .exec();
       } else {
+        //set websocket of reaction
+        this.webSocketService.reaction(createReactionDto);
+        //reset user and message to strings ids
+        createReactionDto.user = createReactionDto.user._id;
+        createReactionDto.message = createReactionDto.message._id;
+
         return this.reactionModel
-          .updateOne(
+          .updateMany(
             {
               message: createReactionDto.message,
               user: createReactionDto.user,
@@ -48,8 +54,15 @@ export class ReactionService {
           )
           .exec();
       }
+    } else {
+      //set websocket of reaction
+      this.webSocketService.reaction(createReactionDto);
+      //reset user and message to strings ids
+      createReactionDto.user = createReactionDto.user._id;
+      createReactionDto.message = createReactionDto.message._id;
+
+      return this.reactionModel.create(createReactionDto);
     }
-    return this.reactionModel.create(createReactionDto);
   }
 
   async findAll() {
