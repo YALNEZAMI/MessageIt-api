@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Module } from '@nestjs/common';
 import { ReactionService } from './reaction.service';
 import { ReactionController } from './reaction.controller';
