@@ -10,6 +10,8 @@ import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
 import { SessionService } from 'src/session/session.service';
 import * as fs from 'fs';
 import { ReactionService } from 'src/reaction/reaction.service';
+import * as CryptoJS from 'crypto-js';
+
 @Injectable()
 export class MessageService {
   constructor(
@@ -21,8 +23,9 @@ export class MessageService {
     private reactionService: ReactionService,
   ) {}
   async create(object: any, files: any) {
-    const createMessageDto: CreateMessageDto = JSON.parse(object.message);
-
+    let createMessageDto: CreateMessageDto = JSON.parse(object.message);
+    //encrypt text
+    createMessageDto = this.encrypteOne(createMessageDto);
     //set visibility
     createMessageDto.visibility = [];
     for (let i = 0; i < createMessageDto.conv.members.length; i++) {
@@ -51,29 +54,66 @@ export class MessageService {
     let messages = [msg];
     messages = await this.fillFields(messages);
     msg = messages[0];
+    //decrypt text
+    msg = this.decryptOne(msg);
     //set lastmsg event to update convs last message
     this.webSocketService.lastMsg(msg);
     //set new message event to update convs msgs
     this.webSocketService.onNewMessage(msg);
     return msg;
   }
-  getVisibleMessages(idConv: string, idUser: string) {
-    return this.messageModel
+  encrypteOne(msg: any) {
+    const iv = process.env.INIT_VECTOR;
+    const key = process.env.ENCRYPT_KEY;
+    msg.text = CryptoJS.AES.encrypt(msg.text, key, { iv }).toString();
+    return msg;
+  }
+  decryptOne(msg: any) {
+    const key = process.env.ENCRYPT_KEY;
+    const iv = process.env.INIT_VECTOR;
+    msg.text = CryptoJS.AES.decrypt(msg.text, key, { iv }).toString(
+      CryptoJS.enc.Utf8,
+    );
+    return msg;
+  }
+  decrypt(messages: any[]) {
+    const key = process.env.ENCRYPT_KEY;
+    const iv = process.env.INIT_VECTOR;
+    messages.map((msg) => {
+      msg.text = CryptoJS.AES.decrypt(msg.text, key, { iv }).toString(
+        CryptoJS.enc.Utf8,
+      );
+    });
+    return messages;
+  }
+  async getVisibleMessages(idConv: string, idUser: string) {
+    let messages = await this.messageModel
       .find({ conv: idConv, visibility: { $in: [idUser] } })
       .exec();
+    //decrypte
+    messages = this.decrypt(messages);
+
+    return messages;
+  }
+  async getLastMessage(idConv: string, idUser: string) {
+    const messages: any = await this.messageModel.find({
+      conv: idConv,
+      visibility: { $in: [idUser] },
+    });
+    //null case
+    if (messages.length == 0) return null;
+    let message = messages[messages.length - 1];
+    //decrypte
+    message = this.decryptOne(message);
+
+    return message;
   }
   findAll() {
     return this.messageModel.find().exec();
   }
   async findAllMessageOfConv(idConv: string) {
     let messages = await this.messageModel.find({ conv: idConv }).exec();
-    // for (let i = 0; i < msgs.length; i++) {
-    //   const msg = msgs[i];
-    //   const user = await this.userService.findeUserForMessage(msg.sender);
-    //   msg.sender = user;
-    // }
     messages = await this.fillFields(messages);
-
     return messages;
   }
   async setRecievedBy(body: { idReciever: string; idMessage: string }) {
@@ -83,7 +123,9 @@ export class MessageService {
         { $addToSet: { recievedBy: body.idReciever } },
       )
       .exec();
-    const message = await this.messageModel.findById(body.idMessage).exec();
+    let message = await this.messageModel.findById(body.idMessage).exec();
+    //decrypte message text
+    message = this.decryptOne(message);
     //set recievedBy event to update convs msgs
     this.webSocketService.onRecievedMessage(message);
     //set sender
@@ -132,6 +174,9 @@ export class MessageService {
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
     messages = await this.fillFields(messages);
+    //decrypte
+    messages = this.decrypt(messages);
+
     return messages;
   }
   async findMessageOfConv(idConv: string, idUser: string) {
@@ -157,7 +202,8 @@ export class MessageService {
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
     messages = await this.fillFields(messages);
-
+    //decrypte
+    messages = this.decrypt(messages);
     return messages;
   }
   getMedias(idConv: string, idUser: string) {
@@ -177,7 +223,9 @@ export class MessageService {
       msg.sender = user;
       //set ref
       if (msg.ref != '') {
-        const repMsg = await this.messageModel.findById(msg.ref);
+        let repMsg = await this.messageModel.findById(msg.ref);
+        //decrypte message text
+        repMsg = this.decryptOne(repMsg);
         msg.ref = repMsg;
         const senderRef = await this.userService.findConfidentialUser(
           msg.ref.sender,
@@ -210,9 +258,14 @@ export class MessageService {
       .find({
         conv: idConv,
         visibility: { $in: [idUser] },
-        text: { $regex: key, $options: 'i' },
+        // text: { $regex: key, $options: 'i' },
       })
       .exec();
+    //decrypte
+    messages = this.decrypt(messages);
+    messages = messages.filter((msg) =>
+      msg.text.toLowerCase().includes(key.toLowerCase()),
+    );
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
     messages = await this.fillFields(messages);
@@ -242,6 +295,8 @@ export class MessageService {
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
     messages = await this.fillFields(messages);
+    //decrypte
+    messages = this.decrypt(messages);
 
     return messages;
   }
@@ -264,6 +319,8 @@ export class MessageService {
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
     //TODO :change fillFields by by adding fill reaction
     messages = await this.fillFields(messages);
+    //decrypte
+    messages = this.decrypt(messages);
 
     return messages;
   }

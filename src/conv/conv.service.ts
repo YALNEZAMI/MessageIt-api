@@ -179,20 +179,7 @@ export class ConvService {
    * @returns  the last message of the conversation
    */
   async getLastMessage(idConv: string, idUser: string) {
-    //get all messages of the conversation
-    const visibleMessages = await this.messageService.getVisibleMessages(
-      idConv,
-      idUser,
-    );
-    if (visibleMessages.length == 0) {
-      return null;
-    } else {
-      //return the last message
-      const lastMsg = visibleMessages[visibleMessages.length - 1];
-      const sender = await this.userService.findOne(lastMsg.sender);
-      lastMsg.sender = sender;
-      return lastMsg;
-    }
+    return await this.messageService.getLastMessage(idConv, idUser);
   }
   /**
    *
@@ -226,6 +213,7 @@ export class ConvService {
       conv.members = members;
       //set last message
       const lastMessage = await this.getLastMessage(conv._id.toString(), id);
+
       //set last message as recieved
       if (lastMessage != null) {
         const lastMessageFinal = await this.messageService.setRecievedBy({

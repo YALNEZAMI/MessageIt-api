@@ -9,6 +9,8 @@ import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
 
 @Injectable()
 export class ReactionService {
+  availablerReactions = ['👍', '❤️', '😂', '😯', '😢', '😡'];
+
   constructor(
     @InjectModel(Reaction.name)
     private reactionModel: Model<ReactionDocument>,
@@ -20,6 +22,10 @@ export class ReactionService {
       .exec();
   }
   async create(createReactionDto: CreateReactionDto): Promise<any> {
+    //check reaction validation
+    if (!this.availablerReactions.includes(createReactionDto.type)) {
+      return { error: 'invalid reaction' };
+    }
     const check: any = await this.alreadyReacted(
       createReactionDto.message._id,
       createReactionDto.user._id,
