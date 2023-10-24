@@ -66,32 +66,35 @@ export class UserService {
     };
   }
   async addOptionsToUsers(users: any[], myid: string) {
-    for (let i = 0; i < users.length; i++) {
-      const user = users[i];
-      const fr = await new Promise((resolve) => {
-        resolve(this.areFriends(myid, user._id));
-      });
-      const iSend = await new Promise((resolve) => {
-        resolve(this.alreadySend(myid, user._id));
-      });
-      const heSend = await new Promise((resolve) => {
-        resolve(this.alreadySend(user._id, myid));
-      });
+    users = await Promise.all(
+      users.map(async (user) => {
+        const fr = await new Promise((resolve) => {
+          resolve(this.areFriends(myid, user._id));
+        });
+        const iSend = await new Promise((resolve) => {
+          resolve(this.alreadySend(myid, user._id));
+        });
+        const heSend = await new Promise((resolve) => {
+          resolve(this.alreadySend(user._id, myid));
+        });
 
-      if (fr) {
-        user.operation = 'remove';
-      } else if (iSend) {
-        user.operation = 'cancel';
-      } else if (heSend) {
-        user.operation = 'accept';
-      } else if (!fr) {
-        user.operation = 'add';
-      }
-      if (user._id.toString() === myid) {
-        users.splice(i, 1);
-        continue;
-      }
-    }
+        if (fr) {
+          user.operation = 'remove';
+        } else if (iSend) {
+          user.operation = 'cancel';
+        } else if (heSend) {
+          user.operation = 'accept';
+        } else if (!fr) {
+          user.operation = 'add';
+        }
+        return user;
+      }),
+    );
+    //remove me from users
+
+    users = users.filter((user) => {
+      return user._id.toString() != myid;
+    });
     return users;
   }
   findAll() {
@@ -119,9 +122,9 @@ export class UserService {
   }
   async findUserOfConv(tabOfIds: { user: string }[]) {
     const tabString: string[] = [];
-    for (const object of tabOfIds) {
+    tabOfIds.map((object) => {
       tabString.push(object.user);
-    }
+    });
 
     return this.UserModel.find({ _id: { $in: tabString } }).exec();
   }
@@ -321,10 +324,14 @@ export class UserService {
     return sender;
   }
   async findConfidentialUser(id: string) {
-    return this.UserModel.findOne(
-      { _id: id },
-      { password: 0, email: 0, codePassword: 0, addReqs: 0, friends: 0 },
-    );
+    try {
+      return this.UserModel.findOne(
+        { _id: id },
+        { password: 0, email: 0, codePassword: 0, addReqs: 0, friends: 0 },
+      );
+    } catch (error) {
+      console.log(error);
+    }
   }
   async removeFriend(myId: string, FriendId: string) {
     await this.UserModel.updateOne(
@@ -411,11 +418,13 @@ export class UserService {
     let res: any[] = [];
     const me = await this.UserModel.findById(id).exec();
     const myAddReqs = me.addReqs;
-    for (let index = 0; index < myAddReqs.length; index++) {
-      const element = myAddReqs[index];
-      const user = await this.UserModel.findById(element).exec();
-      res.push(user);
-    }
+    await Promise.all(
+      myAddReqs.map(async (element) => {
+        const user = await this.UserModel.findById(element).exec();
+        res.push(user);
+      }),
+    );
+
     res = await this.addOptionsToUsers(res, id);
     return res;
   }

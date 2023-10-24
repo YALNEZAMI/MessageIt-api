@@ -28,11 +28,12 @@ export class ConvService {
    */
   async fillMembers(conv: any) {
     const members: any[] = [];
-    for (let i = 0; i < conv.members.length; i++) {
-      const id = conv.members[i];
-      const user = await this.userService.findConfidentialUser(id);
-      members.push(user);
-    }
+    conv.members = await Promise.all(
+      conv.members.map(async (id: string) => {
+        const user = await this.userService.findConfidentialUser(id);
+        members.push(user);
+      }),
+    );
     conv.members = members;
     return conv;
   }
@@ -126,26 +127,27 @@ export class ConvService {
    */
   async addOptionsToUsers(users: any[], myid: string): Promise<any[]> {
     //iterate over the users to add the option
-    for (let i = 0; i < users.length; i++) {
-      const user = users[i];
-      if (user == null) {
-        continue;
-      }
-      //check if the user is a friend, if he send a request, if he receive a request
-      const fr = await this.userService.areFriends(myid, user._id);
-      const iSend = await this.userService.alreadySend(myid, user._id);
-      const heSend = await this.userService.alreadySend(user._id, myid);
-      //set the option according to the result of the checks
-      if (fr) {
-        user.operation = 'remove';
-      } else if (iSend) {
-        user.operation = 'cancel';
-      } else if (heSend) {
-        user.operation = 'accept';
-      } else if (!fr) {
-        user.operation = 'add';
-      }
-    }
+    users = await Promise.all(
+      users.map(async (user) => {
+        if (user != null) {
+          //check if the user is a friend, if he send a request, if he receive a request
+          const fr = await this.userService.areFriends(myid, user._id);
+          const iSend = await this.userService.alreadySend(myid, user._id);
+          const heSend = await this.userService.alreadySend(user._id, myid);
+          //set the option according to the result of the checks
+          if (fr) {
+            user.operation = 'remove';
+          } else if (iSend) {
+            user.operation = 'cancel';
+          } else if (heSend) {
+            user.operation = 'accept';
+          } else if (!fr) {
+            user.operation = 'add';
+          }
+        }
+        return user;
+      }),
+    );
 
     return users;
   }
@@ -159,18 +161,15 @@ export class ConvService {
     let res: any[] = [];
     const conv: any = await this.findOne(idConv);
     const UserIds: string[] = conv.members;
-    for (let i = 0; i < UserIds.length; i++) {
-      const element = UserIds[i];
-      const user: any = await this.userService.findOne(element);
-      if (user == null) {
-        continue;
-      }
-      user.addReqs = null;
-      user.friends = null;
-      res.push(user);
-    }
+    await Promise.all(
+      UserIds.map(async (element) => {
+        const user: any = await this.userService.findConfidentialUser(element);
+        if (user != null) {
+          res.push(user);
+        }
+      }),
+    );
     res = await this.addOptionsToUsers(res, myId);
-
     return res;
   }
   /**
@@ -190,44 +189,40 @@ export class ConvService {
     //set the user online
     await this.sessionService.setStatus(id);
     //get all conversations of the user
-    const myConvs = await this.convOfUser(id);
+    let myConvs: any = await this.convOfUser(id);
 
     if (myConvs.length == 0) {
       return [];
     }
     //iterate over the convs to set the name and the image
-    for (let i = 0; i < myConvs.length; i++) {
-      let conv = myConvs[i];
+    myConvs = await Promise.all(
+      myConvs.map(async (conv: any) => {
+        //set the members
+        conv.members = await Promise.all(
+          conv.members.map(async (member: any) => {
+            member = await this.userService.findConfidentialUser(member);
+            return member;
+          }),
+        );
 
-      //set the members
-      const membersId = conv.members;
-      const members = [];
-      for (const memberId of membersId) {
-        const user = await this.userService.findConfidentialUser(memberId);
-        if (user == null) {
-          continue;
-        } else {
-          members.push(user);
+        //set last message
+        const lastMessage = await this.getLastMessage(conv._id.toString(), id);
+
+        //set last message as recieved
+        if (lastMessage != null) {
+          const lastMessageFinal = await this.messageService.setRecievedBy({
+            idReciever: id,
+            idMessage: lastMessage._id.toString(),
+          });
+
+          conv.lastMessage = lastMessageFinal;
+          //set notif web socket
+          this.webSocketsService.onRecievedMessage(lastMessageFinal);
         }
-      }
-      conv.members = members;
-      //set last message
-      const lastMessage = await this.getLastMessage(conv._id.toString(), id);
-
-      //set last message as recieved
-      if (lastMessage != null) {
-        const lastMessageFinal = await this.messageService.setRecievedBy({
-          idReciever: id,
-          idMessage: lastMessage._id.toString(),
-        });
-
-        conv.lastMessage = lastMessageFinal;
-        //set notif web socket
-        this.webSocketsService.onRecievedMessage(lastMessageFinal);
-      }
-
-      conv = await this.setNameAndPhoto(conv, id);
-    }
+        conv = await this.setNameAndPhoto(conv, id);
+        return conv;
+      }),
+    );
     //sort convs by the last message date
     myConvs.sort((a: any, b: any) => {
       // Get the last message date, or createdAt if there's no last message
@@ -293,24 +288,27 @@ export class ConvService {
     //res is a set to avoid duplicates
     const res = new Set();
     const convs: Conv[] = await this.getMyConvs(myid);
-    //iterate over the convs to find out if the name of the conv or the name of one of its members contains the key word
-    for (let i = 0; i < convs.length; i++) {
-      const conv = convs[i];
-      const nameConv = conv.name.toLowerCase();
-      if (nameConv.includes(key.toLowerCase())) {
-        res.add(conv);
-      }
-      //iterate over the members to find out if the name of one of them contains the key word
-      const members: string[] = conv.members;
-      for (let j = 0; j < members.length; j++) {
-        const member = members[j];
-        const user = await this.userService.findOne(member);
-        const nameUser = user.firstName + ' ' + user.lastName;
-        if (nameUser.includes(key)) {
+    //iterate over the convs to find out if the name of the conv
+    await Promise.all(
+      convs.map(async (conv) => {
+        const nameConv = conv.name.toLowerCase();
+        if (nameConv.includes(key.toLowerCase())) {
           res.add(conv);
         }
-      }
-    }
+        //iterate over the members to find out if the name of one of them contains the key word
+        conv.members = await Promise.all(
+          conv.members.map(async (member: any) => {
+            const user = await this.userService.findOne(member);
+            const nameUser = user.firstName + ' ' + user.lastName;
+            if (nameUser.includes(key)) {
+              res.add(conv);
+            }
+            return member;
+          }),
+        );
+        return conv;
+      }),
+    );
 
     return Array.from(res);
   }
@@ -473,9 +471,11 @@ export class ConvService {
    */
   async leaveAll(id: string): Promise<any> {
     const convs = await this.convOfUser(id);
-    for (let i = 0; i < convs.length; i++) {
-      this.leaveConv(id, convs[i]._id);
-    }
+    await Promise.all(
+      convs.map(async (conv) => {
+        await this.leaveConv(id, conv._id);
+      }),
+    );
   }
   makeGroupe(conv: any) {
     conv.photo = process.env.api_url + '/user/uploads/group.png';
@@ -521,13 +521,16 @@ export class ConvService {
     //use set to avoid duplicates
     const set = new Set();
     //set initial members
-    for (const member of initialMembers) {
+
+    initialMembers.map((member) => {
       set.add(member);
-    }
+    });
+
     //add new members
-    for (const member of members) {
+
+    members.map((member) => {
       set.add(member);
-    }
+    });
 
     await this.ConvModel.updateOne(
       { _id: id },

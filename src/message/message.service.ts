@@ -28,10 +28,9 @@ export class MessageService {
     createMessageDto = this.encrypteOne(createMessageDto);
     //set visibility
     createMessageDto.visibility = [];
-    for (let i = 0; i < createMessageDto.conv.members.length; i++) {
-      const member = createMessageDto.conv.members[i];
-      createMessageDto.visibility.push(member._id);
-    }
+    createMessageDto.conv.members.map((currentMember: any) => {
+      createMessageDto.visibility.push(currentMember._id);
+    });
 
     //when we finish setting visibility, conv become a simple con _id
     createMessageDto.conv = createMessageDto.conv._id;
@@ -43,11 +42,11 @@ export class MessageService {
     //files
     const filesNames = [];
 
-    for (const file of files) {
+    files.map((file: any) => {
       filesNames.push(
         process.env.api_url + '/message/uploads/' + file.filename,
       );
-    }
+    });
     createMessageDto.files = filesNames;
 
     let msg = await this.messageModel.create(createMessageDto);
@@ -201,9 +200,12 @@ export class MessageService {
     }
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
+
     messages = await this.fillFields(messages);
+
     //decrypte
     messages = this.decrypt(messages);
+
     return messages;
   }
   getMedias(idConv: string, idUser: string) {
@@ -215,36 +217,39 @@ export class MessageService {
       })
       .exec();
   }
-  async fillFields(messages: any[]) {
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      //set user
-      const user = await this.userService.findConfidentialUser(msg.sender);
-      msg.sender = user;
-      //set ref
-      if (msg.ref != '') {
-        let repMsg = await this.messageModel.findById(msg.ref);
-        //decrypte message text
-        repMsg = this.decryptOne(repMsg);
-        msg.ref = repMsg;
-        const senderRef = await this.userService.findConfidentialUser(
-          msg.ref.sender,
+  async fillFields(messages: any[]): Promise<any[]> {
+    const res = await Promise.all(
+      messages.map(async (msg) => {
+        //set user
+        const user = await this.userService.findConfidentialUser(msg.sender);
+        msg.sender = user;
+        //set ref
+        if (msg.ref != '') {
+          let repMsg = await this.messageModel.findById(msg.ref);
+          //decrypte message text
+          repMsg = this.decryptOne(repMsg);
+          msg.ref = repMsg;
+          const senderRef = await this.userService.findConfidentialUser(
+            msg.ref.sender,
+          );
+          msg.ref.sender = senderRef;
+        }
+        //set reactions
+        const reactions = await this.reactionService.findAllOfMessage(
+          msg._id.toString(),
         );
-        msg.ref.sender = senderRef;
-      }
-      //set reactions
-      const reactions = await this.reactionService.findAllOfMessage(
-        msg._id.toString(),
-      );
-      for (let r = 0; r < reactions.length; r++) {
-        const reaction: any = reactions[r];
-        reaction.user = await this.userService.findConfidentialUser(
-          reaction.user,
+        msg.reactions = await Promise.all(
+          reactions.map(async (reaction) => {
+            reaction.user = await this.userService.findConfidentialUser(
+              reaction.user,
+            );
+            return reaction;
+          }),
         );
-      }
-      msg.reactions = reactions;
-    }
-    return messages;
+        return msg;
+      }),
+    );
+    return res;
   }
   async getRange(idConv: string, idMessage: string, userId?: string) {
     const all = await this.messageModel
@@ -317,7 +322,6 @@ export class MessageService {
       .exec();
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    //TODO :change fillFields by by adding fill reaction
     messages = await this.fillFields(messages);
     //decrypte
     messages = this.decrypt(messages);
@@ -342,7 +346,7 @@ export class MessageService {
   async remove(id: string): Promise<any> {
     const msg = await this.messageModel.findOne({ _id: id }).exec();
     const files = msg.files;
-    for (let file of files) {
+    files.map((file) => {
       file = file.split('/');
       file = file[file.length - 1];
       fs.access('assets/imagesOfMessages/' + file, fs.constants.F_OK, (err) => {
@@ -358,7 +362,7 @@ export class MessageService {
           // Handle the case where the file exists
         }
       });
-    }
+    });
     //delete reactions
     await this.reactionService.removeAllOfMsg(id);
     //delete message
@@ -368,7 +372,7 @@ export class MessageService {
     const msg = await this.messageModel.findOne({ _id: id }).exec();
     if (msg.sender != idUser) return;
     const files = msg.files;
-    for (let file of files) {
+    files.map((file) => {
       file = file.split('/');
       file = file[file.length - 1];
       fs.access('assets/imagesOfMessages/' + file, fs.constants.F_OK, (err) => {
@@ -384,7 +388,7 @@ export class MessageService {
           // Handle the case where the file exists
         }
       });
-    }
+    });
     //delete reactions
     await this.reactionService.removeAllOfMsg(id);
     //delete message
@@ -420,9 +424,9 @@ export class MessageService {
     const msgsWithMedias = await this.messageModel
       .find({ files: { $exists: true, $ne: [] } })
       .exec();
-    for (const msg of msgsWithMedias) {
+    msgsWithMedias.map((msg) => {
       const files = msg.files;
-      for (let file of files) {
+      files.map((file) => {
         file = file.split('/');
         file = file[file.length - 1];
         fs.access(
@@ -442,8 +446,8 @@ export class MessageService {
             }
           },
         );
-      }
-    }
+      });
+    });
     return this.messageModel.deleteMany().exec();
   }
   removeAllFromConv(idConv: string): any {

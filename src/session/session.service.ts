@@ -11,32 +11,36 @@ export class SessionService {
   ) {}
   //set status to online for 5mins and return user
   async setStatus(id: string) {
-    setTimeout(async () => {
-      const user = await this.userService.findOne(id);
-      const lastConnection: any = user.lastConnection;
-      const now: any = new Date();
-      const diff = now - lastConnection;
-      if (diff > 300000) {
-        await this.userService.update(id, { status: 'offline' });
-      }
-    }, 305000);
-    await this.userService.update(id, {
-      status: 'online',
-      lastConnection: new Date(),
-    });
-    const finalUser = await this.userService.findConfidentialUser(id);
-    //set online websocket
-    this.webSocketService.statusChange(finalUser);
-    return finalUser;
+    try {
+      setTimeout(async () => {
+        const user = await this.userService.findOne(id);
+        const lastConnection: any = user.lastConnection;
+        const now: any = new Date();
+        const diff = now - lastConnection;
+        if (diff > 300000) {
+          await this.userService.update(id, { status: 'offline' });
+        }
+      }, 305000);
+      await this.userService.update(id, {
+        status: 'online',
+        lastConnection: new Date(),
+      });
+      const finalUser = await this.userService.findConfidentialUser(id);
+      //set online websocket
+      this.webSocketService.statusChange(finalUser);
+      return finalUser;
+    } catch (error) {}
   }
   setStatusMannualy(id: string, body: any) {
-    if (body.status === 'online') {
-      this.setStatus(id);
-    } else {
-      this.userService.update(id, { status: body.status });
-    }
-    const finalUser = this.userService.findConfidentialUser(id);
-    //set online websocket
-    this.webSocketService.statusChange(finalUser);
+    try {
+      if (body.status === 'online') {
+        this.setStatus(id);
+      } else {
+        this.userService.update(id, { status: body.status });
+      }
+      const finalUser = this.userService.findConfidentialUser(id);
+      //set online websocket
+      this.webSocketService.statusChange(finalUser);
+    } catch (error) {}
   }
 }
