@@ -82,4 +82,8 @@ export class WebSocketsService {
   reaction(@MessageBody() reaction: any) {
     this.server.emit('reaction', reaction);
   }
+  @SubscribeMessage('statusChange')
+  statusChange(@MessageBody() user: any) {
+    this.server.emit('statusChange', user);
+  }
 }

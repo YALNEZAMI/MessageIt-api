@@ -1,10 +1,15 @@
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
+import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
 
 @Injectable()
 export class SessionService {
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private webSocketService: WebSocketsService,
+  ) {}
+  //set status to online for 5mins and return user
   async setStatus(id: string) {
     setTimeout(async () => {
       const user = await this.userService.findOne(id);
@@ -19,8 +24,10 @@ export class SessionService {
       status: 'online',
       lastConnection: new Date(),
     });
-    const res = await this.userService.findConfidentialUser(id);
-    return res;
+    const finalUser = await this.userService.findConfidentialUser(id);
+    //set online websocket
+    this.webSocketService.statusChange(finalUser);
+    return finalUser;
   }
   setStatusMannualy(id: string, body: any) {
     if (body.status === 'online') {
@@ -28,5 +35,8 @@ export class SessionService {
     } else {
       this.userService.update(id, { status: body.status });
     }
+    const finalUser = this.userService.findConfidentialUser(id);
+    //set online websocket
+    this.webSocketService.statusChange(finalUser);
   }
 }
