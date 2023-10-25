@@ -101,6 +101,16 @@ export class ConvController {
   ) {
     return this.convService.updatePhoto(id, file);
   }
+  //upgrade admin
+  @Patch('/set/admin/upgrade')
+  upgradeToAdmine(@Body() body: any) {
+    return this.convService.upgradeToAdmine(body);
+  }
+  //upgrade admin
+  @Patch('/set/admin/downgrade')
+  downgradeAdmin(@Body() body: any) {
+    return this.convService.downgradeAdmin(body);
+  }
   //endpoint to delete a conversation by the conversation id
   @Delete(':id')
   remove(@Param('id') id: string) {

@@ -546,4 +546,41 @@ export class ConvService {
     this.webSocketsService.onAddMemberToGroupe(convAndNewMembers);
     return finalConv;
   }
+  /**
+   * @param body the body of the request
+   * @returns the conversation updated
+   */
+  async upgradeToAdmine(body: any) {
+    //body:{conv,user,admin}
+    const conv = await this.findOne(body.conv._id);
+    const admins = conv.admins;
+    //check if the user operating the upgrading is an admin
+    if (admins.includes(body.admin._id) && !admins.includes(body.user._id)) {
+      await this.update(body.conv._id, { admins: [...admins, body.user._id] });
+      //set websocket to notify the members of the new admin
+      conv.admins = [...admins, body.user._id];
+      body.conv = conv;
+      this.webSocketsService.upgardingToAdmin(body);
+    }
+    return conv;
+  }
+  async downgradeAdmin(body: any) {
+    //body:{conv,user,admin}
+    const conv = await this.findOne(body.conv._id);
+    const admins = conv.admins;
+    //check if the user operating the upgrading is an admin
+    if (admins.includes(body.admin._id)) {
+      await this.update(body.conv._id, {
+        admins: admins.filter((admin) => admin != body.user._id),
+      });
+      //set websocket to notify the members of the new admin
+      conv.admins = conv.admins.filter((admin) => admin != body.user._id);
+      body.conv.admins = body.conv.admins.filter(
+        (admin: string) => admin != body.user._id,
+      );
+
+      this.webSocketsService.downgardingAdmin(body);
+    }
+    return conv;
+  }
 }

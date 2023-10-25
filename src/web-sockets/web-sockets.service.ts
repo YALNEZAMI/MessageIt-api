@@ -89,4 +89,12 @@ export class WebSocketsService {
   statusChange(@MessageBody() user: any) {
     this.server.emit('statusChange', user);
   }
+  @SubscribeMessage('upgardingToAdmin')
+  upgardingToAdmin(@MessageBody() bodyReq: any) {
+    this.server.emit('upgardingToAdmin', bodyReq);
+  }
+  @SubscribeMessage('downgardingAdmin')
+  downgardingAdmin(@MessageBody() bodyReq: any) {
+    this.server.emit('downgardingAdmin', bodyReq);
+  }
 }
