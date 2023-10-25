@@ -134,7 +134,9 @@ export class UserService {
   }
 
   async findOne(id: string) {
-    console.log(2);
+    if (id == 'undefined') {
+      return null;
+    }
 
     const user = await this.UserModel.findOne({ _id: id }).exec();
     if (user === null) {
@@ -357,7 +359,6 @@ export class UserService {
     if (id == 'undefined') {
       return null;
     }
-
     try {
       return this.UserModel.findOne(
         { _id: id },

@@ -150,9 +150,10 @@ export class MessageService {
       visibility: { $in: [userId] },
     });
     let limit: number = 20;
+
     if (totalCount < 20) {
       messages = await this.messageModel
-        .find({ conv: idConv, visibility: { $in: [userId] } })
+        .find({ $and: [{ conv: idConv }, { visibility: { $in: [userId] } }] })
         .exec();
     } else {
       if (range < 20) {
@@ -164,7 +165,7 @@ export class MessageService {
         limit = 20;
       }
       messages = await this.messageModel
-        .find({ conv: idConv })
+        .find({ $and: [{ conv: idConv }, { visibility: { $in: [userId] } }] })
         .skip(range)
         .limit(limit)
         .exec();
