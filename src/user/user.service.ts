@@ -16,11 +16,15 @@ export class UserService {
     private UserModel: Model<UserDocument>,
     private webSocketService: WebSocketsService,
   ) {
+    console.log('user service started');
+
     //set all users offline
     this.UserModel.updateMany({}, { status: 'offline' }).exec();
   }
   async userAlreadyExist(email: string) {
     email = email.toLowerCase();
+    console.log(1);
+
     const user = await this.UserModel.findOne({ email: email }).exec();
     if (user === null) {
       return false;
@@ -130,6 +134,8 @@ export class UserService {
   }
 
   async findOne(id: string) {
+    console.log(2);
+
     const user = await this.UserModel.findOne({ _id: id }).exec();
     if (user === null) {
       return null;
@@ -143,6 +149,8 @@ export class UserService {
 
   async getUserByEmail(email: string) {
     email = email.toLowerCase();
+    console.log(3);
+
     return await this.UserModel.findOne({ email: email }).exec();
   }
 
@@ -172,12 +180,21 @@ export class UserService {
           }, 305000);
           await this.update(user._id, { lastConnection: new Date() });
           //set websocket subscription to notify friends
-          const confidentielUser = await this.findConfidentialUser(user._id);
+          console.log(4);
+
+          const confidentielUser = await this.UserModel.findOne(
+            { _id: user._id },
+            {
+              password: 0,
+              codePassword: 0,
+            },
+          );
           this.webSocketService.login(confidentielUser);
+
           return {
             status: 200,
             message: 'Success, you can login !',
-            user: user,
+            user: confidentielUser,
           };
         } else {
           return { status: 500, message: 'Password incorrect' };
@@ -189,6 +206,9 @@ export class UserService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
+    if (id == 'undefined') {
+      return null;
+    }
     if (
       updateUserDto.password !== undefined &&
       updateUserDto.password !== null
@@ -198,17 +218,22 @@ export class UserService {
         updateUserDto.password2 = updateUserDto.password2.trim();
         updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
         await this.UserModel.updateOne({ _id: id }, updateUserDto).exec();
+        console.log(5);
+
         return this.UserModel.findOne({ _id: id }, { password: 0 }).exec();
       } else {
+        console.log(6);
+
         return this.UserModel.findOne({ _id: id }, { password: 0 }).exec();
       }
     } else {
       // const updateing =
       await this.UserModel.updateOne({ _id: id }, updateUserDto).exec();
+      console.log(7);
 
       const user = await this.UserModel.findOne(
         { _id: id },
-        { password: 0 },
+        { password: 0, codePassword: 0 },
       ).exec();
 
       return user;
@@ -252,6 +277,9 @@ export class UserService {
     return { status: 200, message: 'Success, you can login now !' };
   }
   async uploadProfilePhoto(file: any, id: string) {
+    if (id == 'undefined') {
+      return null;
+    }
     const user = await this.UserModel.findOne({ _id: id }).exec();
     let oldPhoto = user.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
@@ -280,6 +308,8 @@ export class UserService {
     return { photo: photoName };
   }
   async remove(id: string): Promise<any> {
+    console.log(9);
+
     const user = await this.UserModel.findOne({ _id: id }).exec();
     let oldPhoto = user.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
@@ -324,6 +354,10 @@ export class UserService {
     return sender;
   }
   async findConfidentialUser(id: string) {
+    if (id == 'undefined') {
+      return null;
+    }
+
     try {
       return this.UserModel.findOne(
         { _id: id },
@@ -380,6 +414,8 @@ export class UserService {
   async areFriends(myId: string, FriendId: string) {
     myId = myId.toString();
     FriendId = FriendId.toString();
+    console.log(11);
+
     const res = await this.UserModel.findOne({
       _id: myId,
       friends: { $in: [FriendId] },
@@ -395,6 +431,8 @@ export class UserService {
   async alreadySend(sender: string, reciever: string) {
     sender = sender.toString();
     reciever = reciever.toString();
+    console.log(12);
+
     const res = await this.UserModel.findOne({
       _id: reciever,
       addReqs: { $in: [sender] },

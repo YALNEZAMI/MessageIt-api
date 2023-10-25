@@ -14,6 +14,9 @@ config();
   },
 })
 export class WebSocketsService {
+  constructor() {
+    console.log('web socket service started');
+  }
   @WebSocketServer()
   server: Server;
   //when a new connection occurs, the server logs ‘new connection’ message

@@ -21,7 +21,9 @@ import { UploadedFileInterface } from 'src/interfaces/photo';
 @Controller('conv')
 export class ConvController {
   //injecting the service
-  constructor(private readonly convService: ConvService) {}
+  constructor(private readonly convService: ConvService) {
+    console.log('conv controller started');
+  }
   //endpoint to create a new conversation
   @Post()
   create(@Body() createConvDto: CreateConvDto) {
