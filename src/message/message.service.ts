@@ -151,7 +151,7 @@ export class MessageService {
     });
     let limit: number = 20;
 
-    if (totalCount >= 20) {
+    if (totalCount <= 20) {
       messages = await this.messageModel
         .find({ $and: [{ conv: idConv }, { visibility: { $in: [userId] } }] })
         .exec();
