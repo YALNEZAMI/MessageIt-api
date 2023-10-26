@@ -75,9 +75,13 @@ export class ConvController {
     return this.convService.update(id, updateConvDto);
   }
   //endpoint to add members
-  @Patch('addMembers/:id')
-  addMembers(@Param('id') id: string, @Body() members: string[]) {
-    return this.convService.addMembers(id, members);
+  @Patch('addMembers/:id/:idAdmin')
+  addMembers(
+    @Param('id') id: string,
+    @Param('idAdmin') idAdmin: string,
+    @Body() members: string[],
+  ) {
+    return this.convService.addMembers(id, members, idAdmin);
   }
   @UseInterceptors(
     FileInterceptor('file', {

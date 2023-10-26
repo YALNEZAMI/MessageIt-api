@@ -31,6 +31,7 @@ export class WebSocketsService {
   onNewMessage(@MessageBody() body: any) {
     this.server.emit('newMessage', body);
   }
+
   @SubscribeMessage('setVus')
   onSetVus(@MessageBody() body: any) {
     this.server.emit('setVus', body);

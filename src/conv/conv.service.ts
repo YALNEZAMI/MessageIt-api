@@ -496,7 +496,7 @@ export class ConvService {
       await this.ConvModel.updateOne(
         { _id: idConv },
         { $pull: { members: idUser } },
-        // { multi: true },
+        { $pull: { admins: idUser } },
       ).exec();
 
       conv.members.splice(conv.members.indexOf(idUser), 1);
@@ -507,6 +507,16 @@ export class ConvService {
         idUser: idUser,
         conv: conv,
       });
+      //set conv notifs
+      const visibility = conv.members.map((member: any) => member._id);
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: idConv,
+        maker: idAdmin,
+        reciever: idUser,
+        typeMsg: 'notif',
+        sous_type: 'removeMember',
+      });
       return conv;
     }
   }
@@ -515,7 +525,7 @@ export class ConvService {
    * @param members the members to add
    * @returns the conversation updated
    */
-  async addMembers(id: string, members: string[]) {
+  async addMembers(id: string, members: string[], idAdmin: string) {
     const conv = await this.findOne(id);
     const initialMembers = conv.members;
     //use set to avoid duplicates
@@ -527,10 +537,20 @@ export class ConvService {
     });
 
     //add new members
-
-    members.map((member) => {
-      set.add(member);
-    });
+    await Promise.all(
+      members.map(async (member) => {
+        set.add(member);
+        //set conv notifs
+        await this.messageService.createNotif({
+          visibility: members.concat(initialMembers),
+          conv: id,
+          maker: idAdmin,
+          reciever: member,
+          typeMsg: 'notif',
+          sous_type: 'addMember',
+        });
+      }),
+    );
 
     await this.ConvModel.updateOne(
       { _id: id },
