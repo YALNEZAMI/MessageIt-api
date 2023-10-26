@@ -98,4 +98,10 @@ export class WebSocketsService {
   downgardingAdmin(@MessageBody() bodyReq: any) {
     this.server.emit('downgardingAdmin', bodyReq);
   }
+  @SubscribeMessage('convChanged')
+  convChanged(@MessageBody() conv: any) {
+    console.log(conv);
+
+    this.server.emit('convChanged', conv);
+  }
 }

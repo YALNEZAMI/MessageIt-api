@@ -12,11 +12,11 @@ import {
 } from '@nestjs/common';
 import { ConvService } from './conv.service';
 import { CreateConvDto } from './dto/create-conv.dto';
-import { UpdateConvDto } from './dto/update-conv.dto';
+// import { UpdateConvDto } from './dto/update-conv.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { UploadedFileInterface } from 'src/interfaces/photo';
+// import { UploadedFileInterface } from 'src/interfaces/photo';
 //controller of conversation endpoints
 @Controller('conv')
 export class ConvController {
@@ -71,18 +71,6 @@ export class ConvController {
   }
   //endpoint to update a conversation by the conversation id
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateConvDto: UpdateConvDto) {
-    return this.convService.update(id, updateConvDto);
-  }
-  //endpoint to add members
-  @Patch('addMembers/:id/:idAdmin')
-  addMembers(
-    @Param('id') id: string,
-    @Param('idAdmin') idAdmin: string,
-    @Body() members: string[],
-  ) {
-    return this.convService.addMembers(id, members, idAdmin);
-  }
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -97,18 +85,27 @@ export class ConvController {
       }),
     }),
   )
-  //endpoint to update a conversation photo by the conversation id
-  @Patch('photo/:id')
-  updatePhoto(
+  update(
     @Param('id') id: string,
-    @UploadedFile() file: UploadedFileInterface,
+    @Body() object: any,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.convService.updatePhoto(id, file);
+    return this.convService.update(id, object, file);
   }
+  //endpoint to add members
+  @Patch('addMembers/:id/:idAdmin')
+  addMembers(
+    @Param('id') id: string,
+    @Param('idAdmin') idAdmin: string,
+    @Body() members: string[],
+  ) {
+    return this.convService.addMembers(id, members, idAdmin);
+  }
+
   //upgrade admin
   @Patch('/set/admin/upgrade')
-  upgradeToAdmine(@Body() body: any) {
-    return this.convService.upgradeToAdmine(body);
+  upgradeToAdmin(@Body() body: any) {
+    return this.convService.upgradeToAdmin(body);
   }
   //upgrade admin
   @Patch('/set/admin/downgrade')

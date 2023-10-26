@@ -40,8 +40,8 @@ export class MessageController {
       }),
     }),
   )
-  create(@Body() message: any, @UploadedFiles() files: Express.Multer.File[]) {
-    return this.messageService.create(message, files);
+  create(@Body() object: any, @UploadedFiles() files: Express.Multer.File[]) {
+    return this.messageService.create(object, files);
   }
   @Get('uploads/:fileId')
   sendFile(@Param('fileId') fileId: string, @Res() res: Response) {

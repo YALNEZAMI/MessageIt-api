@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { CreateConvDto } from './dto/create-conv.dto';
-import { UpdateConvDto } from './dto/update-conv.dto';
+// import { UpdateConvDto } from './dto/update-conv.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Conv, ConvDocument } from './entities/conv.entity';
@@ -10,6 +10,7 @@ import { MessageService } from 'src/message/message.service';
 import * as fs from 'fs';
 import { SessionService } from 'src/session/session.service';
 import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
+import { UpdateConvDto } from './dto/update-conv.dto';
 //service of conversation
 @Injectable()
 export class ConvService {
@@ -357,10 +358,86 @@ export class ConvService {
    * @param updateConvDto  the conversation to update
    * @returns  the conversation updated
    */
-  async update(id: string, updateConvDto: UpdateConvDto) {
-    await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
+  async update(id: string, object: any, file: Express.Multer.File) {
     let conv = await this.findOne(id);
     conv = await this.fillMembers(conv);
+
+    const visibility = conv.members.map((member: any) => member._id);
+
+    const updateConvDto: UpdateConvDto = JSON.parse(object.conv);
+    const admin = JSON.parse(object.admin);
+    if (updateConvDto.name != conv.name) {
+      //set conv notifs
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: id,
+        maker: admin._id,
+        typeMsg: 'notif',
+        sous_type: 'convNameChanged',
+      });
+    }
+    if (updateConvDto.description != conv.description) {
+      //set conv notifs
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: id,
+        maker: admin._id,
+        typeMsg: 'notif',
+        sous_type: 'convDescriptionChanged',
+      });
+    }
+    if (updateConvDto.theme != conv.theme) {
+      //set conv notifs
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: id,
+        maker: admin._id,
+        typeMsg: 'notif',
+        sous_type: 'convThemeChanged',
+      });
+    }
+    //TODO notif leave conv
+    if (file == undefined) {
+      await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
+      let conv = await this.findOne(id);
+      conv = await this.fillMembers(conv);
+      //set websocket notif convChanged
+      this.webSocketsService.convChanged(conv);
+
+      return conv;
+    }
+    //set conv notifs
+    await this.messageService.createNotif({
+      visibility: visibility,
+      conv: id,
+      maker: admin._id,
+      typeMsg: 'notif',
+      sous_type: 'convPhotoChanged',
+    });
+    const filepath = process.env.api_url + '/user/uploads/' + file.filename;
+    updateConvDto.photo = filepath;
+    //getting old conv and old photo path to delete it
+    const oldPhoto = conv.photo;
+    //update conv photo path
+    conv.photo = filepath;
+
+    await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
+    //set photo
+    fs.access('assets/imagesOfConvs/' + oldPhoto, fs.constants.F_OK, (err) => {
+      if (err) {
+        // Handle the case where the file does not exist
+      } else {
+        fs.unlink('assets/imagesOfConvs/' + oldPhoto, (err) => {
+          if (err) {
+            console.error(err);
+            return;
+          }
+        });
+        // Handle the case where the file exists
+      }
+    });
+    //set websocket notif convChanged
+    this.webSocketsService.convChanged(conv);
     return conv;
   }
   /**
@@ -447,7 +524,7 @@ export class ConvService {
     if (members.length == 0) {
       return this.remove(idConv);
     } else {
-      await this.update(conv._id, {
+      await this.ConvModel.updateOne(conv._id, {
         members: members,
         admins: [members[0]],
       });
@@ -570,18 +647,30 @@ export class ConvService {
    * @param body the body of the request
    * @returns the conversation updated
    */
-  async upgradeToAdmine(body: any) {
+  async upgradeToAdmin(body: any) {
     //body:{conv,user,admin}
     const conv = await this.findOne(body.conv._id);
     const admins = conv.admins;
     //check if the user operating the upgrading is an admin
     if (admins.includes(body.admin._id) && !admins.includes(body.user._id)) {
-      await this.update(body.conv._id, { admins: [...admins, body.user._id] });
+      await this.ConvModel.updateOne(body.conv._id, {
+        admins: [...admins, body.user._id],
+      });
       //set websocket to notify the members of the new admin
       conv.admins = [...admins, body.user._id];
       body.conv = conv;
       this.webSocketsService.upgardingToAdmin(body);
     }
+    //set conv notifs
+    const visibility = conv.members.map((member: any) => member._id);
+    await this.messageService.createNotif({
+      visibility: visibility,
+      conv: body.conv._id,
+      maker: body.admin._id,
+      reciever: body.user._id,
+      typeMsg: 'notif',
+      sous_type: 'upgradeToAdmin',
+    });
     return conv;
   }
   async downgradeAdmin(body: any) {
@@ -590,7 +679,7 @@ export class ConvService {
     const admins = conv.admins;
     //check if the user operating the upgrading is an admin
     if (admins.includes(body.admin._id)) {
-      await this.update(body.conv._id, {
+      await this.ConvModel.updateOne(body.conv._id, {
         admins: admins.filter((admin) => admin != body.user._id),
       });
       //set websocket to notify the members of the new admin
@@ -601,6 +690,15 @@ export class ConvService {
 
       this.webSocketsService.downgardingAdmin(body);
     }
+    const visibility = conv.members.map((member: any) => member._id);
+    await this.messageService.createNotif({
+      visibility: visibility,
+      conv: body.conv._id,
+      maker: body.admin._id,
+      reciever: body.user._id,
+      typeMsg: 'notif',
+      sous_type: 'downgradeAdmin',
+    });
     return conv;
   }
 }

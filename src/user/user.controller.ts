@@ -126,9 +126,12 @@ export class UserController {
 
     fs.access('assets/imagesOfConvs/' + fileId, fs.constants.F_OK, (err) => {
       if (err) {
+        console.log('file not found');
+
         res.sendFile('/imagesOfConvs/user.png', { root: 'assets' });
         // Handle the case where the file does not exist
       } else {
+        console.log('file found');
         res.sendFile('/imagesOfConvs/' + fileId, { root: 'assets' });
         // Handle the case where the file exists
       }

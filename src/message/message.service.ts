@@ -68,9 +68,11 @@ export class MessageService {
     notif.vus = [notif.maker];
     notif.date = new Date();
     notif.maker = await this.userService.findConfidentialUser(notif.maker);
-    notif.reciever = await this.userService.findConfidentialUser(
-      notif.reciever,
-    );
+    if (notif.reciever != undefined) {
+      notif.reciever = await this.userService.findConfidentialUser(
+        notif.reciever,
+      );
+    }
     //stringify visibility
     notif.visibility = notif.visibility.map((id: string) => id.toString());
     return notif;
