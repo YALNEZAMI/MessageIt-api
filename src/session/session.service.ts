@@ -8,9 +8,7 @@ export class SessionService {
   constructor(
     private userService: UserService,
     private webSocketService: WebSocketsService,
-  ) {
-    console.log('session service started');
-  }
+  ) {}
   //set status to online for 5mins and return user
   async setStatus(id: string) {
     try {

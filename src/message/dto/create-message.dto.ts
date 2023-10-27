@@ -25,4 +25,6 @@ export class CreateMessageDto {
   recievedBy: string[];
   @Column()
   reactions: string[] = [];
+  @Column()
+  typeMsg: string;
 }

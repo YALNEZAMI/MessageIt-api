@@ -16,14 +16,11 @@ export class UserService {
     private UserModel: Model<UserDocument>,
     private webSocketService: WebSocketsService,
   ) {
-    console.log('user service started');
-
     //set all users offline
     this.UserModel.updateMany({}, { status: 'offline' }).exec();
   }
   async userAlreadyExist(email: string) {
     email = email.toLowerCase();
-    console.log(1);
 
     const user = await this.UserModel.findOne({ email: email }).exec();
     if (user === null) {
@@ -151,7 +148,6 @@ export class UserService {
 
   async getUserByEmail(email: string) {
     email = email.toLowerCase();
-    console.log(3);
 
     return await this.UserModel.findOne({ email: email }).exec();
   }
@@ -182,7 +178,6 @@ export class UserService {
           }, 305000);
           await this.update(user._id, { lastConnection: new Date() });
           //set websocket subscription to notify friends
-          console.log(4);
 
           const confidentielUser = await this.UserModel.findOne(
             { _id: user._id },
@@ -220,18 +215,14 @@ export class UserService {
         updateUserDto.password2 = updateUserDto.password2.trim();
         updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
         await this.UserModel.updateOne({ _id: id }, updateUserDto).exec();
-        console.log(5);
 
         return this.UserModel.findOne({ _id: id }, { password: 0 }).exec();
       } else {
-        console.log(6);
-
         return this.UserModel.findOne({ _id: id }, { password: 0 }).exec();
       }
     } else {
       // const updateing =
       await this.UserModel.updateOne({ _id: id }, updateUserDto).exec();
-      console.log(7);
 
       const user = await this.UserModel.findOne(
         { _id: id },
@@ -310,8 +301,6 @@ export class UserService {
     return { photo: photoName };
   }
   async remove(id: string): Promise<any> {
-    console.log(9);
-
     const user = await this.UserModel.findOne({ _id: id }).exec();
     let oldPhoto = user.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
@@ -415,7 +404,6 @@ export class UserService {
   async areFriends(myId: string, FriendId: string) {
     myId = myId.toString();
     FriendId = FriendId.toString();
-    console.log(11);
 
     const res = await this.UserModel.findOne({
       _id: myId,
@@ -432,7 +420,6 @@ export class UserService {
   async alreadySend(sender: string, reciever: string) {
     sender = sender.toString();
     reciever = reciever.toString();
-    console.log(12);
 
     const res = await this.UserModel.findOne({
       _id: reciever,

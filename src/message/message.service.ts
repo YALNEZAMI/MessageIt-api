@@ -24,6 +24,8 @@ export class MessageService {
   ) {}
   async create(object: any, files: any) {
     let createMessageDto: CreateMessageDto = JSON.parse(object.message);
+    //set typeMsg
+    createMessageDto.typeMsg = 'message';
     //encrypt text
     createMessageDto = this.encrypteOne(createMessageDto);
     //set visibility
@@ -67,28 +69,43 @@ export class MessageService {
     notif.files = [];
     notif.vus = [notif.maker];
     notif.date = new Date();
+
+    //stringify visibility
+    notif.visibility = notif.visibility.map((member: any) => {
+      if (typeof member == 'string') return member;
+      member.toString();
+      return member;
+    });
+    return notif;
+  }
+  async fillMakerAndRecieverOfNotif(notif: any) {
     notif.maker = await this.userService.findConfidentialUser(notif.maker);
     if (notif.reciever != undefined) {
       notif.reciever = await this.userService.findConfidentialUser(
         notif.reciever,
       );
     }
-    //stringify visibility
-    notif.visibility = notif.visibility.map((id: string) => id.toString());
     return notif;
   }
   async createNotif(notif: any) {
     notif = await this.fillNotifInfos(notif);
-    await this.messageModel.create(notif);
-    this.webSocketService.onNewMessage(notif);
+
+    let creating = await this.messageModel.create(notif);
+    //fill maker and reciever
+    creating = await this.fillMakerAndRecieverOfNotif(creating);
+
+    this.webSocketService.onNewMessage(creating);
   }
   encrypteOne(msg: any) {
+    if (msg == null) return null;
     const iv = process.env.INIT_VECTOR;
     const key = process.env.ENCRYPT_KEY;
     msg.text = CryptoJS.AES.encrypt(msg.text, key, { iv }).toString();
     return msg;
   }
   decryptOne(msg: any) {
+    if (msg == null) return null;
+
     if (msg.typeMsg == 'message') {
       const key = process.env.ENCRYPT_KEY;
       const iv = process.env.INIT_VECTOR;
@@ -104,6 +121,8 @@ export class MessageService {
     const key = process.env.ENCRYPT_KEY;
     const iv = process.env.INIT_VECTOR;
     messages.map((msg) => {
+      if (msg == null) return null;
+
       if (msg.typeMsg == 'message') {
         msg.text = CryptoJS.AES.decrypt(msg.text, key, { iv }).toString(
           CryptoJS.enc.Utf8,
@@ -150,7 +169,11 @@ export class MessageService {
         { $addToSet: { recievedBy: body.idReciever } },
       )
       .exec();
+
     let message = await this.messageModel.findById(body.idMessage).exec();
+    if (message == null) {
+      return;
+    }
     //decrypte message text
     message = this.decryptOne(message);
     //set recievedBy event to update convs msgs
@@ -204,8 +227,6 @@ export class MessageService {
     return messages;
   }
   async findMessageOfConv(idConv: string, idUser: string) {
-    console.log(idUser);
-
     const total = await this.messageModel.countDocuments({
       conv: idConv,
       visibility: { $in: [idUser] },
@@ -232,7 +253,6 @@ export class MessageService {
 
     //decrypte
     messages = this.decrypt(messages);
-    console.log('length', messages.length);
 
     return messages;
   }

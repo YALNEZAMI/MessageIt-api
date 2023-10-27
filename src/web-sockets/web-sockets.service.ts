@@ -14,9 +14,7 @@ config();
   },
 })
 export class WebSocketsService {
-  constructor() {
-    console.log('web socket service started');
-  }
+  constructor() {}
   @WebSocketServer()
   server: Server;
   //when a new connection occurs, the server logs ‘new connection’ message
@@ -26,7 +24,6 @@ export class WebSocketsService {
   //     console.log('new connection');
   //   });
   // }
-  //declaration of an event called ‘userAdded’ which can be used within methods(like methods dealing with http requests)
   @SubscribeMessage('newMessage')
   onNewMessage(@MessageBody() body: any) {
     this.server.emit('newMessage', body);
@@ -100,8 +97,6 @@ export class WebSocketsService {
   }
   @SubscribeMessage('convChanged')
   convChanged(@MessageBody() conv: any) {
-    console.log(conv);
-
     this.server.emit('convChanged', conv);
   }
 }

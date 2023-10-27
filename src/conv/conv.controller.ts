@@ -21,9 +21,7 @@ import { extname } from 'path';
 @Controller('conv')
 export class ConvController {
   //injecting the service
-  constructor(private readonly convService: ConvService) {
-    console.log('conv controller started');
-  }
+  constructor(private readonly convService: ConvService) {}
   //endpoint to create a new conversation
   @Post()
   create(@Body() createConvDto: CreateConvDto) {
@@ -123,7 +121,7 @@ export class ConvController {
     return this.convService.removeAll();
   }
   //endpoint to leave a conversation by the conversation id and the user id, delete it if the user is the last member
-  @Delete('/leave/:myId/:idConv')
+  @Delete('/leave/:myId/:idConv/')
   leave(@Param('myId') id: string, @Param('idConv') idConv: string) {
     return this.convService.leaveConv(id, idConv);
   }
