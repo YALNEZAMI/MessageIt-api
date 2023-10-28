@@ -517,8 +517,9 @@ export class ConvService {
    * @returns  the conversation deleted if the user is the last member, the conversation updated if not
    */
   async leaveConv(id: string, idConv: string): Promise<any> {
+    //make messages not visible any more
+    await this.messageService.pullFromVisibilityOfConv(idConv, id);
     //set conv notifs
-
     let conv: any = await this.ConvModel.findById(idConv);
     conv = await this.fillMembers(conv);
 
@@ -584,18 +585,14 @@ export class ConvService {
   }
   //TODO on leaving or removing from conv , pull from visibility
   async removeFromGroupe(idUser: string, idAdmin: string, idConv: string) {
-    console.log('idUser', idUser);
-
-    const testBefor = await this.findOne(idConv);
-    console.log('befor', testBefor.admins);
+    //make messages not visible any more
+    await this.messageService.pullFromVisibilityOfConv(idConv, idUser);
     let conv = await this.findOne(idConv);
     if (conv.admins.includes(idAdmin)) {
       await this.ConvModel.updateOne(
         { _id: idConv },
         { $pull: { members: idUser, admins: idUser } },
       ).exec();
-      const testAfter = await this.findOne(idConv);
-      console.log('after', testAfter.admins);
 
       conv.members.splice(conv.members.indexOf(idUser), 1);
       //set members

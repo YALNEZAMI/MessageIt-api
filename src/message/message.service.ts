@@ -451,6 +451,19 @@ export class MessageService {
     this.webSocketService.onMessageDeleted(obj);
     return obj;
   }
+  async pullFromVisibilityOfConv(idConv: string, idUser: string) {
+    return await this.messageModel
+      .updateMany(
+        {
+          conv: idConv,
+          visibility: { $in: [idUser] },
+        },
+        {
+          $pull: { visibility: idUser },
+        },
+      )
+      .exec();
+  }
   async deleteForMe(object: any): Promise<any> {
     //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
     object.operation = 'deleteForMe';
