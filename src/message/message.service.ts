@@ -69,7 +69,6 @@ export class MessageService {
     notif.files = [];
     notif.vus = [notif.maker];
     notif.date = new Date();
-
     //stringify visibility
     notif.visibility = notif.visibility.map((member: any) => {
       if (typeof member == 'string') return member;
@@ -85,6 +84,7 @@ export class MessageService {
         notif.reciever,
       );
     }
+
     return notif;
   }
   async createNotif(notif: any) {
@@ -268,6 +268,9 @@ export class MessageService {
   async fillFields(messages: any[]): Promise<any[]> {
     const res = await Promise.all(
       messages.map(async (msg) => {
+        if (msg.typeMsg == 'notif') {
+          return await this.fillMakerAndRecieverOfNotif(msg);
+        }
         //set user
         const user = await this.userService.findConfidentialUser(msg.sender);
         msg.sender = user;

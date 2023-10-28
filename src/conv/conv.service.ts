@@ -32,10 +32,12 @@ export class ConvService {
     conv.members = await Promise.all(
       conv.members.map(async (id: string) => {
         const user = await this.userService.findConfidentialUser(id);
-        members.push(user);
+        if (user != null) members.push(user);
       }),
     );
+
     conv.members = members;
+
     return conv;
   }
   /**
@@ -54,6 +56,7 @@ export class ConvService {
     //get all conversations
     const conv = await this.ConvModel.findOne({
       $and: [
+        { type: { $ne: 'groupe' } },
         { members: { $in: [id1] } },
         { members: { $in: [id2] } },
         { members: { $size: 2 } },
@@ -192,20 +195,11 @@ export class ConvService {
     //get all conversations of the user
     let myConvs: any = await this.convOfUser(id);
 
-    if (myConvs.length == 0) {
-      return [];
-    }
     //iterate over the convs to set the name and the image
     myConvs = await Promise.all(
       myConvs.map(async (conv: any) => {
         //set the members
-        conv.members = await Promise.all(
-          conv.members.map(async (member: any) => {
-            member = await this.userService.findConfidentialUser(member);
-            return member;
-          }),
-        );
-
+        conv = await this.fillMembers(conv);
         //set last message
         const lastMessage = await this.getLastMessage(conv._id.toString(), id);
 
@@ -229,7 +223,6 @@ export class ConvService {
       // Get the last message date, or createdAt if there's no last message
       const aDate = a.lastMessage ? a.lastMessage.date : a.createdAt;
       const bDate = b.lastMessage ? b.lastMessage.date : b.createdAt;
-
       return bDate - aDate;
     });
 
