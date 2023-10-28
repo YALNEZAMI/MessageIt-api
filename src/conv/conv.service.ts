@@ -730,7 +730,7 @@ export class ConvService {
       //fill members
       conv = await this.fillMembers(conv);
       //set websocket to notify the members of the new chef
-      this.webSocketsService.upgardingToChef(body);
+      this.webSocketsService.upgardingToChef(conv);
       //set conv notifs
       const visibility = conv.members;
       //creating notif
