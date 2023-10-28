@@ -116,10 +116,10 @@ export class ConvController {
     return this.convService.remove(id);
   }
   //endpoint to delete all conversations(dev mode)
-  @Delete('/all/all')
-  removeAll() {
-    return this.convService.removeAll();
-  }
+  // @Delete('/all/all')
+  // removeAll() {
+  //   return this.convService.removeAll();
+  // }
   //endpoint to leave a conversation by the conversation id and the user id, delete it if the user is the last member
   @Delete('/leave/:myId/:idConv/')
   leave(@Param('myId') id: string, @Param('idConv') idConv: string) {

@@ -142,8 +142,8 @@ export class MessageController {
     //object:{idMsg:string,idUser:string,memberLength:number}
     return this.messageService.deleteForMe(object);
   }
-  @Delete('/all/all/all')
-  removeAll() {
-    return this.messageService.removeAll();
-  }
+  // @Delete('/all/all/all')
+  // removeAll() {
+  //   return this.messageService.removeAll();
+  // }
 }
