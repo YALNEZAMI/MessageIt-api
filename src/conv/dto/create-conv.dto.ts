@@ -31,4 +31,7 @@ export class CreateConvDto {
   //date of creation
   @Column()
   createdAt: Date;
+  //chef of group
+  @Column()
+  chef?: string;
 }

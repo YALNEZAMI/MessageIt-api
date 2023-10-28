@@ -88,12 +88,16 @@ export class WebSocketsService {
     this.server.emit('statusChange', user);
   }
   @SubscribeMessage('upgardingToAdmin')
-  upgardingToAdmin(@MessageBody() bodyReq: any) {
-    this.server.emit('upgardingToAdmin', bodyReq);
+  upgardingToAdmin(@MessageBody() conv: any) {
+    this.server.emit('upgardingToAdmin', conv);
+  }
+  @SubscribeMessage('upgardingToChef')
+  upgardingToChef(@MessageBody() conv: any) {
+    this.server.emit('upgardingToChef', conv);
   }
   @SubscribeMessage('downgardingAdmin')
-  downgardingAdmin(@MessageBody() bodyReq: any) {
-    this.server.emit('downgardingAdmin', bodyReq);
+  downgardingAdmin(@MessageBody() conv: any) {
+    this.server.emit('downgardingAdmin', conv);
   }
   @SubscribeMessage('convChanged')
   convChanged(@MessageBody() conv: any) {

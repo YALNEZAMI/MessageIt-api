@@ -105,6 +105,11 @@ export class ConvController {
   upgradeToAdmin(@Body() body: any) {
     return this.convService.upgradeToAdmin(body);
   }
+  //upgrade to chef
+  @Patch('/set/chef/upgrade')
+  upgradeToChef(@Body() body: any) {
+    return this.convService.upgradeToChef(body);
+  }
   //upgrade admin
   @Patch('/set/admin/downgrade')
   downgradeAdmin(@Body() body: any) {

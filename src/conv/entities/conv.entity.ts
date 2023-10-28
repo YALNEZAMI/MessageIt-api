@@ -23,6 +23,8 @@ export class Conv {
   admins: any[];
   @Prop({ required: true })
   createdAt: Date;
+  @Prop({ required: false })
+  chef: string;
 }
 export const ConvSchema = SchemaFactory.createForClass(Conv);
 export type ConvDocument = Conv & Document;

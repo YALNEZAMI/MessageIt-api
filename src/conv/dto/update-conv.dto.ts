@@ -11,4 +11,5 @@ export class UpdateConvDto extends PartialType(CreateConvDto) {
   theme?: string;
   type?: string;
   admins?: any[];
+  chef?: string;
 }
