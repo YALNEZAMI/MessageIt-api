@@ -514,7 +514,34 @@ export class MessageService {
     });
     return this.messageModel.deleteMany().exec();
   }
-  removeAllFromConv(idConv: string): any {
+  async removeAllFromConv(idConv: string): Promise<any> {
+    const msgsWithMedias = await this.messageModel
+      .find({ files: { $exists: true, $ne: [] }, conv: idConv })
+      .exec();
+    msgsWithMedias.map((msg) => {
+      const files = msg.files;
+      files.map((file) => {
+        file = file.split('/');
+        file = file[file.length - 1];
+        fs.access(
+          'assets/imagesOfMessages/' + file,
+          fs.constants.F_OK,
+          (err) => {
+            if (err) {
+              // Handle the case where the file does not exist
+            } else {
+              fs.unlink('assets/imagesOfMessages/' + file, (err) => {
+                if (err) {
+                  console.error(err);
+                  return;
+                }
+              });
+              // Handle the case where the file exists
+            }
+          },
+        );
+      });
+    });
     return this.messageModel.deleteMany({ conv: idConv }).exec();
   }
 }

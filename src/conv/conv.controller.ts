@@ -105,6 +105,11 @@ export class ConvController {
   upgradeToAdmin(@Body() body: any) {
     return this.convService.upgradeToAdmin(body);
   }
+  //upgrade to chef
+  @Patch('/set/chef/upgrade')
+  upgradeToChef(@Body() body: any) {
+    return this.convService.upgradeToChef(body);
+  }
   //upgrade admin
   @Patch('/set/admin/downgrade')
   downgradeAdmin(@Body() body: any) {
@@ -116,10 +121,10 @@ export class ConvController {
     return this.convService.remove(id);
   }
   //endpoint to delete all conversations(dev mode)
-  @Delete('/all/all')
-  removeAll() {
-    return this.convService.removeAll();
-  }
+  // @Delete('/all/all')
+  // removeAll() {
+  //   return this.convService.removeAll();
+  // }
   //endpoint to leave a conversation by the conversation id and the user id, delete it if the user is the last member
   @Delete('/leave/:myId/:idConv/')
   leave(@Param('myId') id: string, @Param('idConv') idConv: string) {

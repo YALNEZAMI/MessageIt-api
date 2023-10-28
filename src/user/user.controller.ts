@@ -123,10 +123,10 @@ export class UserController {
   delete(@Param('id') id: string) {
     return this.userService.remove(id);
   }
-  @Delete('/all/all')
-  deleteAll() {
-    return this.userService.deleteAll();
-  }
+  // @Delete('/all/all')
+  // deleteAll() {
+  //   return this.userService.deleteAll();
+  // }
 
   //friend part
   @Post('/friends')

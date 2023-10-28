@@ -200,6 +200,9 @@ export class ConvService {
       myConvs.map(async (conv: any) => {
         //set the members
         conv = await this.fillMembers(conv);
+        //set name and photo
+        conv = await this.setNameAndPhoto(conv, id);
+
         //set last message
         const lastMessage = await this.getLastMessage(conv._id.toString(), id);
 
@@ -212,9 +215,9 @@ export class ConvService {
 
           conv.lastMessage = lastMessageFinal;
           //set notif web socket
+          //TODO undestande this notif
           this.webSocketsService.onRecievedMessage(lastMessageFinal);
         }
-        conv = await this.setNameAndPhoto(conv, id);
         return conv;
       }),
     );
@@ -233,13 +236,16 @@ export class ConvService {
    * @return conv with name and image adapted to the user
    */
   async setNameAndPhoto(conv: any, id: string) {
+    //groupe case
     if (conv.type == 'groupe') return conv;
     const me = await this.userService.findOne(id);
-
+    //lonley case
     if (conv.members.length == 1) {
       conv.name = me.firstName + ' ' + me.lastName;
       conv.photo = me.photo;
+      return conv;
     }
+    //two members case and private case
     if ((conv.members.length = 2)) {
       if (conv.members[0]._id == id) {
         const friend = await this.userService.findOne(conv.members[1]);
@@ -493,6 +499,7 @@ export class ConvService {
         },
       );
     }
+    //remove all messages of the conversation
     await this.messageService.removeAllFromConv(id);
     return this.ConvModel.deleteMany({ _id: id }).exec();
   }
@@ -576,12 +583,17 @@ export class ConvService {
   typing(object: any) {
     this.webSocketsService.typing(object);
   }
-  //TODO on leaving or removing from conv , pull from visibility
   async removeFromGroupe(idUser: string, idAdmin: string, idConv: string) {
-    //make messages not visible any more
-    await this.messageService.pullFromVisibilityOfConv(idConv, idUser);
     let conv = await this.findOne(idConv);
-    if (conv.admins.includes(idAdmin)) {
+    //checks
+    if (
+      conv.chef == idAdmin ||
+      (conv.admins.includes(idAdmin) &&
+        !conv.admins.includes(idUser) &&
+        conv.chef != idUser &&
+        idAdmin != idUser &&
+        conv.members.includes(idUser))
+    ) {
       await this.ConvModel.updateOne(
         { _id: idConv },
         { $pull: { members: idUser, admins: idUser } },
@@ -605,6 +617,10 @@ export class ConvService {
         typeMsg: 'notif',
         sous_type: 'removeMember',
       });
+      //make messages not visible any more
+      await this.messageService.pullFromVisibilityOfConv(idConv, idUser);
+      return conv;
+    } else {
       return conv;
     }
   }
@@ -613,17 +629,17 @@ export class ConvService {
    * @param members the members to add
    * @returns the conversation updated
    */
-  async addMembers(id: string, members: string[], idAdmin: string) {
-    const conv = await this.findOne(id);
+  async addMembers(idConv: string, members: string[], idAdmin: string) {
+    let conv = await this.findOne(idConv);
+    //some checks
+    if (idAdmin != conv.chef && !conv.admins.includes(idAdmin)) return conv;
     const initialMembers = conv.members;
     //use set to avoid duplicates
     const set = new Set();
     //set initial members
-
     initialMembers.map((member) => {
       set.add(member);
     });
-
     //add new members
     await Promise.all(
       members.map(async (member) => {
@@ -631,7 +647,7 @@ export class ConvService {
         //set conv notifs
         await this.messageService.createNotif({
           visibility: members.concat(initialMembers),
-          conv: id,
+          conv: idConv,
           maker: idAdmin,
           reciever: member,
           typeMsg: 'notif',
@@ -639,20 +655,20 @@ export class ConvService {
         });
       }),
     );
-
+    //update database
     await this.ConvModel.updateOne(
-      { _id: id },
+      { _id: idConv },
       { members: Array.from(set) },
     ).exec();
-    let finalConv = await this.findOne(id);
-    finalConv = await this.fillMembers(finalConv);
+    conv.members = Array.from(set);
+    conv = await this.fillMembers(conv);
     //set websocket to notify the members of the new members
     const convAndNewMembers = {
-      conv: finalConv,
+      conv: conv,
       members: members,
     };
     this.webSocketsService.onAddMemberToGroupe(convAndNewMembers);
-    return finalConv;
+    return conv;
   }
   /**
    * @param body the body of the request
@@ -662,39 +678,84 @@ export class ConvService {
     //body:{conv,user,admin}
     const conv = await this.findOne(body.conv._id);
     const admins = conv.admins;
-    //check if the user operating the upgrading is an admin
-    if (admins.includes(body.admin._id) && !admins.includes(body.user._id)) {
-      await this.ConvModel.updateOne(
-        { _id: body.conv._id },
-        {
-          $addToSet: { admins: body.user._id },
-        },
-      );
-      //set websocket to notify the members of the new admin
-      conv.admins = [...admins, body.user._id];
-      body.conv = conv;
-      this.webSocketsService.upgardingToAdmin(body);
-    }
+    //check if the user operating the upgrading is the chef
+    if (conv.chef != body.chef._id) return conv;
+    //if permission is verified
+    await this.ConvModel.updateOne(
+      { _id: body.conv._id },
+      {
+        $addToSet: { admins: body.user._id },
+      },
+    );
+    //set websocket to notify the members of the new admin
+    conv.admins = [...admins, body.user._id];
+    this.webSocketsService.upgardingToAdmin(conv);
+
     //set conv notifs
     const visibility = conv.members;
-
+    //creating notif
     await this.messageService.createNotif({
       visibility: visibility,
       conv: body.conv._id,
-      maker: body.admin._id,
+      maker: body.chef._id,
       reciever: body.user._id,
       typeMsg: 'notif',
       sous_type: 'upgradeToAdmin',
     });
     return conv;
   }
+  async upgradeToChef(body: any) {
+    let conv = await this.findOne(body.conv._id);
+    const user = body.user;
+    const chef = body.chef;
+    //cheks
+    if (chef._id == conv.chef) {
+      //chenges:user not admin if was,chef not chef but admin,user chef
+      //remove new chef from admins
+      if (conv.admins.includes(user._id)) {
+        conv.admins = conv.admins.filter((admin: any) => admin != user._id);
+      }
+      //add old chef to admins
+      conv.admins.push(conv.chef);
+      //set new chef
+      conv.chef = user._id;
+      //update database
+      await this.ConvModel.updateOne(
+        { _id: body.conv._id },
+        {
+          chef: user._id,
+          admins: conv.admins,
+        },
+      );
+      //fill members
+      conv = await this.fillMembers(conv);
+      //set websocket to notify the members of the new chef
+      this.webSocketsService.upgardingToChef(conv);
+      //set conv notifs
+      const visibility = conv.members;
+      //creating notif
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: body.conv._id,
+        maker: body.chef._id,
+        reciever: body.user._id,
+        typeMsg: 'notif',
+        sous_type: 'upgradeToChef',
+      });
+      return conv;
+    } else {
+      return body.conv;
+    }
+  }
   async downgradeAdmin(body: any) {
     //body:{conv,user,admin}
     const conv: any = await this.findOne(body.conv._id);
-
     const admins = conv.admins;
-    //check if the user operating the upgrading is an admin
-    if (admins.includes(body.admin._id)) {
+    //check if the user operating the upgrading is the chef or if the user is already an admin
+    if (conv.chef != body.chef._id || !admins.includes(body.user._id)) {
+      return conv;
+    } else {
+      //if permission is verified
       await this.ConvModel.updateOne(
         { _id: body.conv._id },
         {
@@ -702,25 +763,24 @@ export class ConvService {
         },
       );
       //set websocket to notify the members of the new admin
-      conv.admins = conv.admins.filter((admin) => admin != body.user._id);
+      conv.admins = conv.admins.filter((admin: any) => admin != body.user._id);
       body.conv.admins = body.conv.admins.filter(
         (admin: string) => admin != body.user._id,
       );
-      this.webSocketsService.downgardingAdmin(body);
+      this.webSocketsService.downgardingAdmin(body.conv);
 
       const visibility = conv.members;
       const notif = {
         visibility: visibility,
         conv: body.conv._id,
-        maker: body.admin._id,
+        maker: body.chef._id,
         reciever: body.user._id,
         typeMsg: 'notif',
         sous_type: 'downgradeAdmin',
       };
-
+      //creating notif
       await this.messageService.createNotif(notif);
+      return conv;
     }
-
-    return conv;
   }
 }
