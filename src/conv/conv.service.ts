@@ -200,6 +200,9 @@ export class ConvService {
       myConvs.map(async (conv: any) => {
         //set the members
         conv = await this.fillMembers(conv);
+        //set name and photo
+        conv = await this.setNameAndPhoto(conv, id);
+
         //set last message
         const lastMessage = await this.getLastMessage(conv._id.toString(), id);
 
@@ -212,9 +215,9 @@ export class ConvService {
 
           conv.lastMessage = lastMessageFinal;
           //set notif web socket
+          //TODO undestande this notif
           this.webSocketsService.onRecievedMessage(lastMessageFinal);
         }
-        conv = await this.setNameAndPhoto(conv, id);
         return conv;
       }),
     );
@@ -233,13 +236,16 @@ export class ConvService {
    * @return conv with name and image adapted to the user
    */
   async setNameAndPhoto(conv: any, id: string) {
+    //groupe case
     if (conv.type == 'groupe') return conv;
     const me = await this.userService.findOne(id);
-
+    //lonley case
     if (conv.members.length == 1) {
       conv.name = me.firstName + ' ' + me.lastName;
       conv.photo = me.photo;
+      return conv;
     }
+    //two members case and private case
     if ((conv.members.length = 2)) {
       if (conv.members[0]._id == id) {
         const friend = await this.userService.findOne(conv.members[1]);
@@ -493,6 +499,7 @@ export class ConvService {
         },
       );
     }
+    //remove all messages of the conversation
     await this.messageService.removeAllFromConv(id);
     return this.ConvModel.deleteMany({ _id: id }).exec();
   }
