@@ -10,6 +10,7 @@ import { WebSocketsModule } from './web-sockets/web-sockets.module';
 import { SessionModule } from './session/session.module';
 import { MailerModule } from './mailer/mailer.module';
 import { ConfigModule } from '@nestjs/config';
+import { ReactionModule } from './reaction/reaction.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ConfigModule } from '@nestjs/config';
     WebSocketsModule,
     SessionModule,
     MailerModule,
+    ReactionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

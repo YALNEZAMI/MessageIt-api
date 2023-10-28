@@ -21,6 +21,7 @@ export class UserService {
   }
   async userAlreadyExist(email: string) {
     email = email.toLowerCase();
+
     const user = await this.UserModel.findOne({ email: email }).exec();
     if (user === null) {
       return false;
@@ -57,9 +58,8 @@ export class UserService {
     createUserDto.lastConnection = new Date();
     createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
     createUserDto.photo = process.env.api_url + '/user/uploads/user.png';
-    const user = await this.UserModel.create(createUserDto);
-    delete user.password;
-    user.password = '';
+    const userCreated = await this.UserModel.create(createUserDto);
+    const user = await this.findConfidentialUser(userCreated._id);
     return {
       status: 200,
       message: 'Success, you can login now !',
@@ -67,32 +67,35 @@ export class UserService {
     };
   }
   async addOptionsToUsers(users: any[], myid: string) {
-    for (let i = 0; i < users.length; i++) {
-      const user = users[i];
-      const fr = await new Promise((resolve) => {
-        resolve(this.areFriends(myid, user._id));
-      });
-      const iSend = await new Promise((resolve) => {
-        resolve(this.alreadySend(myid, user._id));
-      });
-      const heSend = await new Promise((resolve) => {
-        resolve(this.alreadySend(user._id, myid));
-      });
+    users = await Promise.all(
+      users.map(async (user) => {
+        const fr = await new Promise((resolve) => {
+          resolve(this.areFriends(myid, user._id));
+        });
+        const iSend = await new Promise((resolve) => {
+          resolve(this.alreadySend(myid, user._id));
+        });
+        const heSend = await new Promise((resolve) => {
+          resolve(this.alreadySend(user._id, myid));
+        });
 
-      if (fr) {
-        user.operation = 'remove';
-      } else if (iSend) {
-        user.operation = 'cancel';
-      } else if (heSend) {
-        user.operation = 'accept';
-      } else if (!fr) {
-        user.operation = 'add';
-      }
-      if (user._id.toString() === myid) {
-        users.splice(i, 1);
-        continue;
-      }
-    }
+        if (fr) {
+          user.operation = 'remove';
+        } else if (iSend) {
+          user.operation = 'cancel';
+        } else if (heSend) {
+          user.operation = 'accept';
+        } else if (!fr) {
+          user.operation = 'add';
+        }
+        return user;
+      }),
+    );
+    //remove me from users
+
+    users = users.filter((user) => {
+      return user._id.toString() != myid;
+    });
     return users;
   }
   findAll() {
@@ -120,14 +123,18 @@ export class UserService {
   }
   async findUserOfConv(tabOfIds: { user: string }[]) {
     const tabString: string[] = [];
-    for (const object of tabOfIds) {
+    tabOfIds.map((object) => {
       tabString.push(object.user);
-    }
+    });
 
     return this.UserModel.find({ _id: { $in: tabString } }).exec();
   }
 
   async findOne(id: string) {
+    if (id == 'undefined') {
+      return null;
+    }
+
     const user = await this.UserModel.findOne({ _id: id }).exec();
     if (user === null) {
       return null;
@@ -138,53 +145,67 @@ export class UserService {
 
     return user;
   }
-  async findeUserForMessage(id: string) {
-    const res = await this.UserModel.findById(
-      id,
-      {
-        firstName: 1,
-        lastName: 1,
-        photo: 1,
-      },
-      { password: 0, email: 0 },
-    ).exec();
 
-    return res;
-  }
   async getUserByEmail(email: string) {
     email = email.toLowerCase();
+
     return await this.UserModel.findOne({ email: email }).exec();
   }
 
   async login(data: any): Promise<any> {
-    data.password = data.password.trim();
-    const userExist = await this.userAlreadyExist(data.email);
-    if (!userExist) {
-      return { status: 501, message: 'Please verify your email !' };
-    } else {
-      const user = await this.getUserByEmail(data.email);
-      const matchPassword = await bcrypt.compare(data.password, user.password);
-      if (matchPassword) {
-        delete user.password;
-        user.password = '';
-        //set as online
-        setTimeout(async () => {
-          const lastConnection: any = user.lastConnection;
-          const now: any = new Date();
-          const diff = now - lastConnection;
-          if (diff > 300000) {
-            await this.update(user._id, { status: 'offline' });
-          }
-        }, 305000);
-        await this.update(user._id, { lastConnection: new Date() });
-        return { status: 200, message: 'Success, you can login !', user: user };
+    try {
+      data.password = data.password.trim();
+      const userExist = await this.userAlreadyExist(data.email);
+      if (!userExist) {
+        return { status: 501, message: 'Please verify your email !' };
       } else {
-        return { status: 500, message: 'Password incorrect' };
+        const user = await this.getUserByEmail(data.email);
+        const matchPassword = await bcrypt.compare(
+          data.password,
+          user.password,
+        );
+        if (matchPassword) {
+          delete user.password;
+          user.password = '';
+          //set as online
+          setTimeout(async () => {
+            const lastConnection: any = user.lastConnection;
+            const now: any = new Date();
+            const diff = now - lastConnection;
+            if (diff > 300000) {
+              await this.update(user._id, { status: 'offline' });
+            }
+          }, 305000);
+          await this.update(user._id, { lastConnection: new Date() });
+          //set websocket subscription to notify friends
+
+          const confidentielUser = await this.UserModel.findOne(
+            { _id: user._id },
+            {
+              password: 0,
+              codePassword: 0,
+            },
+          );
+          this.webSocketService.login(confidentielUser);
+
+          return {
+            status: 200,
+            message: 'Success, you can login !',
+            user: confidentielUser,
+          };
+        } else {
+          return { status: 500, message: 'Password incorrect' };
+        }
       }
+    } catch (error) {
+      return { status: 501, message: 'Please close the app and retry !' };
     }
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
+    if (id == 'undefined') {
+      return null;
+    }
     if (
       updateUserDto.password !== undefined &&
       updateUserDto.password !== null
@@ -194,6 +215,7 @@ export class UserService {
         updateUserDto.password2 = updateUserDto.password2.trim();
         updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
         await this.UserModel.updateOne({ _id: id }, updateUserDto).exec();
+
         return this.UserModel.findOne({ _id: id }, { password: 0 }).exec();
       } else {
         return this.UserModel.findOne({ _id: id }, { password: 0 }).exec();
@@ -204,7 +226,7 @@ export class UserService {
 
       const user = await this.UserModel.findOne(
         { _id: id },
-        { password: 0 },
+        { password: 0, codePassword: 0 },
       ).exec();
 
       return user;
@@ -248,6 +270,9 @@ export class UserService {
     return { status: 200, message: 'Success, you can login now !' };
   }
   async uploadProfilePhoto(file: any, id: string) {
+    if (id == 'undefined') {
+      return null;
+    }
     const user = await this.UserModel.findOne({ _id: id }).exec();
     let oldPhoto = user.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
@@ -320,10 +345,17 @@ export class UserService {
     return sender;
   }
   async findConfidentialUser(id: string) {
-    return this.UserModel.findOne(
-      { _id: id },
-      { password: 0, email: 0, codePassword: 0, addReqs: 0 },
-    );
+    if (id == 'undefined') {
+      return null;
+    }
+    try {
+      return this.UserModel.findOne(
+        { _id: id },
+        { password: 0, email: 0, codePassword: 0, addReqs: 0, friends: 0 },
+      );
+    } catch (error) {
+      console.log(error);
+    }
   }
   async removeFriend(myId: string, FriendId: string) {
     await this.UserModel.updateOne(
@@ -372,6 +404,7 @@ export class UserService {
   async areFriends(myId: string, FriendId: string) {
     myId = myId.toString();
     FriendId = FriendId.toString();
+
     const res = await this.UserModel.findOne({
       _id: myId,
       friends: { $in: [FriendId] },
@@ -387,6 +420,7 @@ export class UserService {
   async alreadySend(sender: string, reciever: string) {
     sender = sender.toString();
     reciever = reciever.toString();
+
     const res = await this.UserModel.findOne({
       _id: reciever,
       addReqs: { $in: [sender] },
@@ -410,12 +444,26 @@ export class UserService {
     let res: any[] = [];
     const me = await this.UserModel.findById(id).exec();
     const myAddReqs = me.addReqs;
-    for (let index = 0; index < myAddReqs.length; index++) {
-      const element = myAddReqs[index];
-      const user = await this.UserModel.findById(element).exec();
-      res.push(user);
-    }
+    await Promise.all(
+      myAddReqs.map(async (element) => {
+        const user = await this.UserModel.findById(element).exec();
+        res.push(user);
+      }),
+    );
+
     res = await this.addOptionsToUsers(res, id);
     return res;
+  }
+  async friendsToAdd(idUser: string, members: string[]) {
+    let friends = await this.UserModel.find(
+      { friends: { $in: [idUser] } },
+      { password: 0, email: 0, codePassword: 0, addReqs: 0, friends: 0 },
+    ).exec();
+    //keep only friends that are not members of the conv
+    friends = friends.filter((friend) => {
+      return !members.includes(friend._id.toString());
+    });
+
+    return friends;
   }
 }

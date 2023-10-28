@@ -40,8 +40,8 @@ export class MessageController {
       }),
     }),
   )
-  create(@Body() message: any, @UploadedFiles() files: Express.Multer.File[]) {
-    return this.messageService.create(message, files);
+  create(@Body() object: any, @UploadedFiles() files: Express.Multer.File[]) {
+    return this.messageService.create(object, files);
   }
   @Get('uploads/:fileId')
   sendFile(@Param('fileId') fileId: string, @Res() res: Response) {
@@ -121,7 +121,7 @@ export class MessageController {
     return this.messageService.getMedias(idConv, idUser);
   }
 
-  @Patch(':id')
+  @Patch('/:id')
   update(@Param('id') id: string, @Body() updateMessageDto: UpdateMessageDto) {
     return this.messageService.update(id, updateMessageDto);
   }
@@ -129,16 +129,20 @@ export class MessageController {
   setVus(@Body() body: any) {
     return this.messageService.setVus(body);
   }
-  @Delete(':idMsg/:idUser')
+  @Patch('/set/recievedBy')
+  setRecievedBy(@Body() body: any) {
+    return this.messageService.setRecievedBy(body);
+  }
+  @Delete('/:idMsg/:idUser')
   removeForAll(@Param('idMsg') idMsg: string, @Param('idUser') idUser: string) {
     return this.messageService.removeForAll(idMsg, idUser);
   }
-  @Patch('delete/ForMe')
+  @Patch('/delete/ForMe')
   deleteForMe(@Body() object: any) {
     //object:{idMsg:string,idUser:string,memberLength:number}
     return this.messageService.deleteForMe(object);
   }
-  @Delete('/all/all')
+  @Delete('/all/all/all')
   removeAll() {
     return this.messageService.removeAll();
   }

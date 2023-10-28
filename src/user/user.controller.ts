@@ -33,7 +33,6 @@ export class UserController {
 
   @Get('login/:email/:password')
   login(@Param('email') email: string, @Param('password') password: string) {
-    // req.session['user'] = email;
     const data = {
       email: email,
       password: password,
@@ -45,17 +44,26 @@ export class UserController {
   findAll() {
     return this.userService.findAll();
   }
-  @Get('/search/:key/:myid')
-  searched(@Param('key') key: string, @Param('myid') myid: string) {
-    return this.userService.searched(key, myid);
+  @Get('/search/:key/:id')
+  searched(@Param('key') key: string, @Param('id') id: string) {
+    if (id == 'undefined') {
+      return null;
+    }
+    return this.userService.searched(key, id);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
+    if (id == 'undefined') {
+      return null;
+    }
     return this.userService.findOne(id);
   }
   @Get('/findreqSentToMe/:id')
-  findreqSentToMe(@Param('id') id: string) {
+  friendReqSentToMe(@Param('id') id: string) {
+    if (id == 'undefined') {
+      return null;
+    }
     return this.userService.findreqSentToMe(id);
   }
 
@@ -74,7 +82,6 @@ export class UserController {
   @Patch('/password/reset')
   async resetPassword(@Body() updateUserDto: UpdateUserDto) {
     const res = await this.userService.resetPassword(updateUserDto);
-
     return res;
   }
   //Profile image upload
@@ -151,5 +158,10 @@ export class UserController {
   @Get('/myFriends/:id')
   getMyFriends(@Param('id') id: string) {
     return this.userService.getMyFriends(id);
+  }
+  //     return this.Http.get(`${this.uri}/user/friendsToAdd/${this.getMyId()}/${this.getThisConv()._id}`);
+  @Post('friendsToAdd/:idUser')
+  friendsToAdd(@Param('idUser') idUser: string, @Body() members: string[]) {
+    return this.userService.friendsToAdd(idUser, members);
   }
 }

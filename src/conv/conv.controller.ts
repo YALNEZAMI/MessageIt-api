@@ -12,11 +12,11 @@ import {
 } from '@nestjs/common';
 import { ConvService } from './conv.service';
 import { CreateConvDto } from './dto/create-conv.dto';
-import { UpdateConvDto } from './dto/update-conv.dto';
+// import { UpdateConvDto } from './dto/update-conv.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { UploadedFileInterface } from 'src/interfaces/photo';
+// import { UploadedFileInterface } from 'src/interfaces/photo';
 //controller of conversation endpoints
 @Controller('conv')
 export class ConvController {
@@ -69,10 +69,6 @@ export class ConvController {
   }
   //endpoint to update a conversation by the conversation id
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateConvDto: UpdateConvDto) {
-    return this.convService.update(id, updateConvDto);
-  }
-
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -87,13 +83,32 @@ export class ConvController {
       }),
     }),
   )
-  //endpoint to update a conversation photo by the conversation id
-  @Patch('photo/:id')
-  updatePhoto(
+  update(
     @Param('id') id: string,
-    @UploadedFile() file: UploadedFileInterface,
+    @Body() object: any,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.convService.updatePhoto(id, file);
+    return this.convService.update(id, object, file);
+  }
+  //endpoint to add members
+  @Patch('addMembers/:id/:idAdmin')
+  addMembers(
+    @Param('id') id: string,
+    @Param('idAdmin') idAdmin: string,
+    @Body() members: string[],
+  ) {
+    return this.convService.addMembers(id, members, idAdmin);
+  }
+
+  //upgrade admin
+  @Patch('/set/admin/upgrade')
+  upgradeToAdmin(@Body() body: any) {
+    return this.convService.upgradeToAdmin(body);
+  }
+  //upgrade admin
+  @Patch('/set/admin/downgrade')
+  downgradeAdmin(@Body() body: any) {
+    return this.convService.downgradeAdmin(body);
   }
   //endpoint to delete a conversation by the conversation id
   @Delete(':id')
@@ -106,8 +121,20 @@ export class ConvController {
     return this.convService.removeAll();
   }
   //endpoint to leave a conversation by the conversation id and the user id, delete it if the user is the last member
-  @Delete('/leave/:myId/:idConv')
+  @Delete('/leave/:myId/:idConv/')
   leave(@Param('myId') id: string, @Param('idConv') idConv: string) {
     return this.convService.leaveConv(id, idConv);
+  }
+  @Delete('/leaveAll/:idUser')
+  leaveAll(@Param('idUser') idUser: string) {
+    return this.convService.leaveAll(idUser);
+  }
+  @Delete('/removeFromGroupe/:idUser/:idAdmin/:idConv')
+  removeFromGroupe(
+    @Param('idUser') idUser: string,
+    @Param('idAdmin') idAdmin: string,
+    @Param('idConv') idConv: string,
+  ) {
+    return this.convService.removeFromGroupe(idUser, idAdmin, idConv);
   }
 }

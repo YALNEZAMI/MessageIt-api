@@ -22,4 +22,13 @@ export class CreateConvDto {
   //members of the conversation(string to set and array to get)
   @Column()
   members: any[];
+  //type of the conversation(group or private)
+  @Column()
+  type: string;
+  //admins of the conversation
+  @Column()
+  admins: any[];
+  //date of creation
+  @Column()
+  createdAt: Date;
 }

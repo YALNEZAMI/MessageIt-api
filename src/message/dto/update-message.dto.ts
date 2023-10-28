@@ -11,4 +11,6 @@ export class UpdateMessageDto extends PartialType(CreateMessageDto) {
   visibility?: string[];
   sender?: string;
   vus?: string[];
+  recievedBy?: string[];
+  reactions?: string[];
 }

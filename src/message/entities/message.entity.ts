@@ -18,8 +18,20 @@ export class Message {
   visibility: string[];
   @Prop({ required: true })
   vus: string[];
-  @Prop({ required: true, type: Object })
+  @Prop({ required: false, type: Object })
   sender: any;
+  @Prop({ required: false })
+  recievedBy: string[];
+  @Prop({ required: false })
+  reactions: string[];
+  @Prop({ required: true })
+  typeMsg: string;
+  @Prop({ required: false })
+  sous_type: string;
+  @Prop({ required: false, type: Object })
+  maker: any;
+  @Prop({ required: false, type: Object })
+  reciever: any;
 }
 export const MessageSchema = SchemaFactory.createForClass(Message);
 export type MessageDocument = Message & Document;

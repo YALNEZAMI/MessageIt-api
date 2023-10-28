@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { CreateConvDto } from './dto/create-conv.dto';
-import { UpdateConvDto } from './dto/update-conv.dto';
+// import { UpdateConvDto } from './dto/update-conv.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Conv, ConvDocument } from './entities/conv.entity';
@@ -10,6 +10,7 @@ import { MessageService } from 'src/message/message.service';
 import * as fs from 'fs';
 import { SessionService } from 'src/session/session.service';
 import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
+import { UpdateConvDto } from './dto/update-conv.dto';
 //service of conversation
 @Injectable()
 export class ConvService {
@@ -28,12 +29,15 @@ export class ConvService {
    */
   async fillMembers(conv: any) {
     const members: any[] = [];
-    for (let i = 0; i < conv.members.length; i++) {
-      const id = conv.members[i];
-      const user = await this.userService.findOne(id);
-      members.push(user);
-    }
+    conv.members = await Promise.all(
+      conv.members.map(async (id: string) => {
+        const user = await this.userService.findConfidentialUser(id);
+        if (user != null) members.push(user);
+      }),
+    );
+
     conv.members = members;
+
     return conv;
   }
   /**
@@ -52,6 +56,7 @@ export class ConvService {
     //get all conversations
     const conv = await this.ConvModel.findOne({
       $and: [
+        { type: { $ne: 'groupe' } },
         { members: { $in: [id1] } },
         { members: { $in: [id2] } },
         { members: { $size: 2 } },
@@ -93,16 +98,31 @@ export class ConvService {
     );
     //return the conversation if it exist, create a new one if not
     if (exist.bool) {
+      exist.conv = await this.fillMembers(exist.conv);
       return exist.conv;
     } else {
       createConvDto.photo = process.env.api_url + '/user/uploads/user.png';
+      //set type
+      if (createConvDto.members.length > 2) {
+        createConvDto.type = 'groupe';
+      } else {
+        createConvDto.type = 'private';
+        createConvDto.admins = [];
+      }
       const convCreated = await this.ConvModel.create(createConvDto);
       const newId = convCreated._id.toString();
-      let finalConv = await this.findOne(newId);
+
+      let finalConv = await this.ConvModel.findOne({ _id: newId }, {}).exec();
       finalConv = await this.fillMembers(finalConv);
+      //set name of groupe if empty
+      // finalConv = await this.setNameAndPhoto(finalConv,createConvDto.members[0]);
+
+      //set websocket to notifiy the members of the new conversation
+      this.webSocketsService.OnCreateConv(finalConv);
       return finalConv;
     }
   }
+
   /**
    *
    * @param users users to add the option
@@ -111,26 +131,27 @@ export class ConvService {
    */
   async addOptionsToUsers(users: any[], myid: string): Promise<any[]> {
     //iterate over the users to add the option
-    for (let i = 0; i < users.length; i++) {
-      const user = users[i];
-      if (user == null) {
-        continue;
-      }
-      //check if the user is a friend, if he send a request, if he receive a request
-      const fr = await this.userService.areFriends(myid, user._id);
-      const iSend = await this.userService.alreadySend(myid, user._id);
-      const heSend = await this.userService.alreadySend(user._id, myid);
-      //set the option according to the result of the checks
-      if (fr) {
-        user.operation = 'remove';
-      } else if (iSend) {
-        user.operation = 'cancel';
-      } else if (heSend) {
-        user.operation = 'accept';
-      } else if (!fr) {
-        user.operation = 'add';
-      }
-    }
+    users = await Promise.all(
+      users.map(async (user) => {
+        if (user != null) {
+          //check if the user is a friend, if he send a request, if he receive a request
+          const fr = await this.userService.areFriends(myid, user._id);
+          const iSend = await this.userService.alreadySend(myid, user._id);
+          const heSend = await this.userService.alreadySend(user._id, myid);
+          //set the option according to the result of the checks
+          if (fr) {
+            user.operation = 'remove';
+          } else if (iSend) {
+            user.operation = 'cancel';
+          } else if (heSend) {
+            user.operation = 'accept';
+          } else if (!fr) {
+            user.operation = 'add';
+          }
+        }
+        return user;
+      }),
+    );
 
     return users;
   }
@@ -144,18 +165,15 @@ export class ConvService {
     let res: any[] = [];
     const conv: any = await this.findOne(idConv);
     const UserIds: string[] = conv.members;
-    for (let i = 0; i < UserIds.length; i++) {
-      const element = UserIds[i];
-      const user: any = await this.userService.findOne(element);
-      if (user == null) {
-        continue;
-      }
-      user.addReqs = null;
-      user.friends = null;
-      res.push(user);
-    }
+    await Promise.all(
+      UserIds.map(async (element) => {
+        const user: any = await this.userService.findConfidentialUser(element);
+        if (user != null) {
+          res.push(user);
+        }
+      }),
+    );
     res = await this.addOptionsToUsers(res, myId);
-
     return res;
   }
   /**
@@ -163,15 +181,8 @@ export class ConvService {
    * @param idConv the id of the conversation
    * @returns  the last message of the conversation
    */
-  async getLastMessage(idConv: string) {
-    //get all messages of the conversation
-    const messages = await this.messageService.findAllMessageOfConv(idConv);
-    if (messages.length == 0) {
-      return null;
-    } else {
-      //return the last message
-      return messages[messages.length - 1];
-    }
+  async getLastMessage(idConv: string, idUser: string) {
+    return await this.messageService.getLastMessage(idConv, idUser);
   }
   /**
    *
@@ -182,122 +193,77 @@ export class ConvService {
     //set the user online
     await this.sessionService.setStatus(id);
     //get all conversations of the user
-    const myConvs = await this.convOfUser(id);
+    let myConvs: any = await this.convOfUser(id);
 
-    if (myConvs.length == 0) {
-      return [];
-    }
     //iterate over the convs to set the name and the image
-    for (let i = 0; i < myConvs.length; i++) {
-      const conv = myConvs[i];
+    myConvs = await Promise.all(
+      myConvs.map(async (conv: any) => {
+        //set the members
+        conv = await this.fillMembers(conv);
+        //set last message
+        const lastMessage = await this.getLastMessage(conv._id.toString(), id);
 
-      //set the members
-      const membersId = conv.members;
-      const members = [];
-      for (const memberId of membersId) {
-        const user = await this.userService.findOne(memberId);
-        if (user == null) {
-          continue;
-        } else {
-          members.push(user);
+        //set last message as recieved
+        if (lastMessage != null) {
+          const lastMessageFinal = await this.messageService.setRecievedBy({
+            idReciever: id,
+            idMessage: lastMessage._id.toString(),
+          });
+
+          conv.lastMessage = lastMessageFinal;
+          //set notif web socket
+          this.webSocketsService.onRecievedMessage(lastMessageFinal);
         }
-      }
-      conv.members = members;
-      //set last message
-      const lasMessage = await this.getLastMessage(conv._id.toString());
-      conv.lastMessage = lasMessage;
-
-      /**
-       * set the name,
-       * if the conv is a group chat, the name is 'Group chat',
-       * if the conv is a conversation with one person,
-       *  the name is the name of the person,
-       * if the conv is a conversation with more than one person,
-       *  the name is the name of the first person in the conversation who is not the current user
-       *
-       */
-
-      if (members.length == 1) {
-        const me = await this.userService.findOne(id);
-        conv.name = me.firstName + ' ' + me.lastName;
-      }
-      if (members.length == 2) {
-        if ((members.length = 2)) {
-          if (members[0]._id == id) {
-            const friend = await this.userService.findOne(members[1]);
-
-            if (friend != null) {
-              conv.name = friend.firstName + ' ' + friend.lastName;
-            } else {
-              const me = await this.userService.findOne(id);
-              conv.name = me.firstName + ' ' + me.lastName;
-            }
-          } else {
-            const friend = await this.userService.findOne(members[0]);
-            if (friend != null) {
-              conv.name = friend.firstName + ' ' + friend.lastName;
-            } else {
-              const me = await this.userService.findOne(id);
-              conv.name = me.firstName + ' ' + me.lastName;
-            }
-          }
-        }
-      }
-      if (members.length > 2 && (conv.name == undefined || conv.name == '')) {
-        conv.name = 'Group chat';
-      }
-      /**
-       * set the conv image,
-       * if the conv is a group chat,
-       * the image is 'assets/images/group.png',
-       * if the conv is a conversation with one person,
-       * the image is the image of the person,
-       * if the conv is a conversation with more than one person,
-       * the image is the image of the first person in the conversation who is not the current user
-       */
-      if (members.length == 1) {
-        const me = await this.userService.findOne(id);
-        conv.photo = me.photo;
-      }
-
-      if (members.length == 2) {
-        if (members[0]._id == id) {
-          const friend = await this.userService.findOne(members[1]);
-          if (friend == null || friend.photo == undefined) {
-            conv.photo = ' ';
-          } else {
-            conv.photo = friend.photo;
-          }
-        } else {
-          const friend = await this.userService.findOne(members[0]);
-          if (friend == null || friend.photo == undefined) {
-            conv.photo = ' ';
-          } else {
-            conv.photo = friend.photo;
-          }
-        }
-      }
-      if (
-        (members.length > 2 && conv.photo == undefined) ||
-        conv.photo == null ||
-        conv.photo == ' ' ||
-        conv.photo == ''
-      ) {
-        conv.photo = process.env.api_url + '/user/uploads/group.png';
-      }
-    }
+        conv = await this.setNameAndPhoto(conv, id);
+        return conv;
+      }),
+    );
     //sort convs by the last message date
     myConvs.sort((a: any, b: any) => {
-      if (a.lastMessage != null && b.lastMessage != null) {
-        const dateA = a.lastMessage.date;
-        const dateB = b.lastMessage.date;
-        return dateB - dateA;
-      } else {
-        return 1;
-      }
+      // Get the last message date, or createdAt if there's no last message
+      const aDate = a.lastMessage ? a.lastMessage.date : a.createdAt;
+      const bDate = b.lastMessage ? b.lastMessage.date : b.createdAt;
+      return bDate - aDate;
     });
 
     return myConvs;
+  }
+  /**
+   * @param conv
+   * @return conv with name and image adapted to the user
+   */
+  async setNameAndPhoto(conv: any, id: string) {
+    if (conv.type == 'groupe') return conv;
+    const me = await this.userService.findOne(id);
+
+    if (conv.members.length == 1) {
+      conv.name = me.firstName + ' ' + me.lastName;
+      conv.photo = me.photo;
+    }
+    if ((conv.members.length = 2)) {
+      if (conv.members[0]._id == id) {
+        const friend = await this.userService.findOne(conv.members[1]);
+
+        if (friend != null) {
+          conv.name = friend.firstName + ' ' + friend.lastName;
+          conv.photo = friend.photo;
+        } else {
+          conv.name = me.firstName + ' ' + me.lastName;
+          conv.photo = me.photo;
+        }
+      } else {
+        const friend = await this.userService.findOne(conv.members[0]);
+        if (friend != null) {
+          conv.name = friend.firstName + ' ' + friend.lastName;
+          conv.photo = friend.photo;
+        } else {
+          conv.photo = me.photo;
+          conv.name = me.firstName + ' ' + me.lastName;
+        }
+      }
+    }
+
+    return conv;
   }
   /**
    *
@@ -316,24 +282,27 @@ export class ConvService {
     //res is a set to avoid duplicates
     const res = new Set();
     const convs: Conv[] = await this.getMyConvs(myid);
-    //iterate over the convs to find out if the name of the conv or the name of one of its members contains the key word
-    for (let i = 0; i < convs.length; i++) {
-      const conv = convs[i];
-      const nameConv = conv.name.toLowerCase();
-      if (nameConv.includes(key.toLowerCase())) {
-        res.add(conv);
-      }
-      //iterate over the members to find out if the name of one of them contains the key word
-      const members: string[] = conv.members;
-      for (let j = 0; j < members.length; j++) {
-        const member = members[j];
-        const user = await this.userService.findOne(member);
-        const nameUser = user.firstName + ' ' + user.lastName;
-        if (nameUser.includes(key)) {
+    //iterate over the convs to find out if the name of the conv
+    await Promise.all(
+      convs.map(async (conv) => {
+        const nameConv = conv.name.toLowerCase();
+        if (nameConv.includes(key.toLowerCase())) {
           res.add(conv);
         }
-      }
-    }
+        //iterate over the members to find out if the name of one of them contains the key word
+        conv.members = await Promise.all(
+          conv.members.map(async (member: any) => {
+            const user = await this.userService.findOne(member);
+            const nameUser = user.firstName + ' ' + user.lastName;
+            if (nameUser.includes(key)) {
+              res.add(conv);
+            }
+            return member;
+          }),
+        );
+        return conv;
+      }),
+    );
 
     return Array.from(res);
   }
@@ -344,6 +313,7 @@ export class ConvService {
    */
   async findOne(id: string) {
     const conv = await this.ConvModel.findOne({ _id: id }).exec();
+    if (conv == null) return null;
     const members: any = conv.members;
 
     //set name
@@ -381,9 +351,85 @@ export class ConvService {
    * @param updateConvDto  the conversation to update
    * @returns  the conversation updated
    */
-  async update(id: string, updateConvDto: UpdateConvDto) {
+  async update(id: string, object: any, file: Express.Multer.File) {
+    let conv = await this.findOne(id);
+    conv = await this.fillMembers(conv);
+
+    const visibility = conv.members.map((member: any) => member._id);
+
+    const updateConvDto: UpdateConvDto = JSON.parse(object.conv);
+    const admin = JSON.parse(object.admin);
+    if (updateConvDto.name != conv.name) {
+      //set conv notifs
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: id,
+        maker: admin._id,
+        typeMsg: 'notif',
+        sous_type: 'convNameChanged',
+      });
+    }
+    if (updateConvDto.description != conv.description) {
+      //set conv notifs
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: id,
+        maker: admin._id,
+        typeMsg: 'notif',
+        sous_type: 'convDescriptionChanged',
+      });
+    }
+    if (updateConvDto.theme != conv.theme) {
+      //set conv notifs
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: id,
+        maker: admin._id,
+        typeMsg: 'notif',
+        sous_type: 'convThemeChanged',
+      });
+    }
+    if (file == undefined) {
+      await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
+      let conv = await this.findOne(id);
+      conv = await this.fillMembers(conv);
+      //set websocket notif convChanged
+      this.webSocketsService.convChanged(conv);
+
+      return conv;
+    }
+    //set conv notifs
+    await this.messageService.createNotif({
+      visibility: visibility,
+      conv: id,
+      maker: admin._id,
+      typeMsg: 'notif',
+      sous_type: 'convPhotoChanged',
+    });
+    const filepath = process.env.api_url + '/user/uploads/' + file.filename;
+    updateConvDto.photo = filepath;
+    //getting old conv and old photo path to delete it
+    const oldPhoto = conv.photo;
+    //update conv photo path
+    conv.photo = filepath;
+
     await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
-    const conv = await this.findOne(id);
+    //set photo
+    fs.access('assets/imagesOfConvs/' + oldPhoto, fs.constants.F_OK, (err) => {
+      if (err) {
+        // Handle the case where the file does not exist
+      } else {
+        fs.unlink('assets/imagesOfConvs/' + oldPhoto, (err) => {
+          if (err) {
+            console.error(err);
+            return;
+          }
+        });
+        // Handle the case where the file exists
+      }
+    });
+    //set websocket notif convChanged
+    this.webSocketsService.convChanged(conv);
     return conv;
   }
   /**
@@ -464,24 +510,58 @@ export class ConvService {
    * @returns  the conversation deleted if the user is the last member, the conversation updated if not
    */
   async leaveConv(id: string, idConv: string): Promise<any> {
-    const conv = await this.findOne(idConv);
-    const members = conv.members;
-    members.splice(members.indexOf(id), 1);
+    //make messages not visible any more
+    await this.messageService.pullFromVisibilityOfConv(idConv, id);
+    //set conv notifs
+    let conv: any = await this.ConvModel.findById(idConv);
+    conv = await this.fillMembers(conv);
+
+    const members = conv.members
+      .filter((member: any) => member._id != id)
+      .map((member: any) => member._id.toString());
+    const visibility = conv.members;
+
+    await this.messageService.createNotif({
+      visibility: visibility,
+      conv: idConv,
+      maker: id,
+      typeMsg: 'notif',
+      sous_type: 'leaveConv',
+    });
+
     if (members.length == 0) {
       return this.remove(idConv);
     } else {
-      return await this.update(conv._id, { members: members });
+      await this.ConvModel.updateOne(
+        { _id: idConv },
+        {
+          members: members,
+          $pull: { admins: id },
+        },
+      );
+      //set updated members of the conversation
+
+      conv = await this.setNameAndPhoto(conv, id);
+      //set websocket to notify the members of the new members
+      const leaver = this.userService.findConfidentialUser(id);
+      this.webSocketsService.onLeavingConv({
+        conv: conv,
+        leaver: leaver,
+      });
+      return conv;
     }
   }
   /**
    * to use when a user delete his account
    * @param id the id of the user
    */
-  async leaveAllConv(id: string): Promise<any> {
+  async leaveAll(id: string): Promise<any> {
     const convs = await this.convOfUser(id);
-    for (let i = 0; i < convs.length; i++) {
-      this.leaveConv(id, convs[i]._id);
-    }
+    await Promise.all(
+      convs.map(async (conv) => {
+        await this.leaveConv(id, conv._id);
+      }),
+    );
   }
   makeGroupe(conv: any) {
     conv.photo = process.env.api_url + '/user/uploads/group.png';
@@ -495,5 +575,152 @@ export class ConvService {
   }
   typing(object: any) {
     this.webSocketsService.typing(object);
+  }
+  //TODO on leaving or removing from conv , pull from visibility
+  async removeFromGroupe(idUser: string, idAdmin: string, idConv: string) {
+    //make messages not visible any more
+    await this.messageService.pullFromVisibilityOfConv(idConv, idUser);
+    let conv = await this.findOne(idConv);
+    if (conv.admins.includes(idAdmin)) {
+      await this.ConvModel.updateOne(
+        { _id: idConv },
+        { $pull: { members: idUser, admins: idUser } },
+      ).exec();
+
+      conv.members.splice(conv.members.indexOf(idUser), 1);
+      //set members
+      conv = await this.fillMembers(conv);
+      //set websocket notif
+      this.webSocketsService.onRemoveFromGroupe({
+        idUser: idUser,
+        conv: conv,
+      });
+      //set conv notifs
+      const visibility = conv.members.map((member: any) => member._id);
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: idConv,
+        maker: idAdmin,
+        reciever: idUser,
+        typeMsg: 'notif',
+        sous_type: 'removeMember',
+      });
+      return conv;
+    }
+  }
+  /**
+   * @param id the id of the conversation
+   * @param members the members to add
+   * @returns the conversation updated
+   */
+  async addMembers(id: string, members: string[], idAdmin: string) {
+    const conv = await this.findOne(id);
+    const initialMembers = conv.members;
+    //use set to avoid duplicates
+    const set = new Set();
+    //set initial members
+
+    initialMembers.map((member) => {
+      set.add(member);
+    });
+
+    //add new members
+    await Promise.all(
+      members.map(async (member) => {
+        set.add(member);
+        //set conv notifs
+        await this.messageService.createNotif({
+          visibility: members.concat(initialMembers),
+          conv: id,
+          maker: idAdmin,
+          reciever: member,
+          typeMsg: 'notif',
+          sous_type: 'addMember',
+        });
+      }),
+    );
+
+    await this.ConvModel.updateOne(
+      { _id: id },
+      { members: Array.from(set) },
+    ).exec();
+    let finalConv = await this.findOne(id);
+    finalConv = await this.fillMembers(finalConv);
+    //set websocket to notify the members of the new members
+    const convAndNewMembers = {
+      conv: finalConv,
+      members: members,
+    };
+    this.webSocketsService.onAddMemberToGroupe(convAndNewMembers);
+    return finalConv;
+  }
+  /**
+   * @param body the body of the request
+   * @returns the conversation updated
+   */
+  async upgradeToAdmin(body: any) {
+    //body:{conv,user,admin}
+    const conv = await this.findOne(body.conv._id);
+    const admins = conv.admins;
+    //check if the user operating the upgrading is an admin
+    if (admins.includes(body.admin._id) && !admins.includes(body.user._id)) {
+      await this.ConvModel.updateOne(
+        { _id: body.conv._id },
+        {
+          $addToSet: { admins: body.user._id },
+        },
+      );
+      //set websocket to notify the members of the new admin
+      conv.admins = [...admins, body.user._id];
+      body.conv = conv;
+      this.webSocketsService.upgardingToAdmin(body);
+    }
+    //set conv notifs
+    const visibility = conv.members;
+
+    await this.messageService.createNotif({
+      visibility: visibility,
+      conv: body.conv._id,
+      maker: body.admin._id,
+      reciever: body.user._id,
+      typeMsg: 'notif',
+      sous_type: 'upgradeToAdmin',
+    });
+    return conv;
+  }
+  async downgradeAdmin(body: any) {
+    //body:{conv,user,admin}
+    const conv: any = await this.findOne(body.conv._id);
+
+    const admins = conv.admins;
+    //check if the user operating the upgrading is an admin
+    if (admins.includes(body.admin._id)) {
+      await this.ConvModel.updateOne(
+        { _id: body.conv._id },
+        {
+          admins: admins.filter((admin: string) => admin != body.user._id),
+        },
+      );
+      //set websocket to notify the members of the new admin
+      conv.admins = conv.admins.filter((admin) => admin != body.user._id);
+      body.conv.admins = body.conv.admins.filter(
+        (admin: string) => admin != body.user._id,
+      );
+      this.webSocketsService.downgardingAdmin(body);
+
+      const visibility = conv.members;
+      const notif = {
+        visibility: visibility,
+        conv: body.conv._id,
+        maker: body.admin._id,
+        reciever: body.user._id,
+        typeMsg: 'notif',
+        sous_type: 'downgradeAdmin',
+      };
+
+      await this.messageService.createNotif(notif);
+    }
+
+    return conv;
   }
 }

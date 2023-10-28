@@ -9,6 +9,9 @@ import { UserService } from 'src/user/user.service';
 import { WebSocketsService } from 'src/web-sockets/web-sockets.service';
 import { SessionService } from 'src/session/session.service';
 import * as fs from 'fs';
+import { ReactionService } from 'src/reaction/reaction.service';
+import * as CryptoJS from 'crypto-js';
+
 @Injectable()
 export class MessageService {
   constructor(
@@ -17,16 +20,19 @@ export class MessageService {
     private userService: UserService,
     private sessionService: SessionService,
     private webSocketService: WebSocketsService,
+    private reactionService: ReactionService,
   ) {}
   async create(object: any, files: any) {
-    const createMessageDto: CreateMessageDto = JSON.parse(object.message);
-
+    let createMessageDto: CreateMessageDto = JSON.parse(object.message);
+    //set typeMsg
+    createMessageDto.typeMsg = 'message';
+    //encrypt text
+    createMessageDto = this.encrypteOne(createMessageDto);
     //set visibility
     createMessageDto.visibility = [];
-    for (let i = 0; i < createMessageDto.conv.members.length; i++) {
-      const member = createMessageDto.conv.members[i];
-      createMessageDto.visibility.push(member._id);
-    }
+    createMessageDto.conv.members.map((currentMember: any) => {
+      createMessageDto.visibility.push(currentMember._id);
+    });
 
     //when we finish setting visibility, conv become a simple con _id
     createMessageDto.conv = createMessageDto.conv._id;
@@ -38,39 +44,151 @@ export class MessageService {
     //files
     const filesNames = [];
 
-    for (const file of files) {
+    files.map((file: any) => {
       filesNames.push(
         process.env.api_url + '/message/uploads/' + file.filename,
       );
-    }
+    });
     createMessageDto.files = filesNames;
 
     let msg = await this.messageModel.create(createMessageDto);
     let messages = [msg];
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
     msg = messages[0];
+    //decrypt text
+    msg = this.decryptOne(msg);
     //set lastmsg event to update convs last message
     this.webSocketService.lastMsg(msg);
     //set new message event to update convs msgs
     this.webSocketService.onNewMessage(msg);
     return msg;
   }
+  async fillNotifInfos(notif: any) {
+    notif.text = '';
+    notif.ref = '';
+    notif.files = [];
+    notif.vus = [notif.maker];
+    notif.date = new Date();
+    //stringify visibility
+    notif.visibility = notif.visibility.map((member: any) => {
+      if (typeof member == 'string') return member;
+      member.toString();
+      return member;
+    });
+    return notif;
+  }
+  async fillMakerAndRecieverOfNotif(notif: any) {
+    notif.maker = await this.userService.findConfidentialUser(notif.maker);
+    if (notif.reciever != undefined) {
+      notif.reciever = await this.userService.findConfidentialUser(
+        notif.reciever,
+      );
+    }
 
+    return notif;
+  }
+  async createNotif(notif: any) {
+    notif = await this.fillNotifInfos(notif);
+
+    let creating = await this.messageModel.create(notif);
+    //fill maker and reciever
+    creating = await this.fillMakerAndRecieverOfNotif(creating);
+
+    this.webSocketService.onNewMessage(creating);
+  }
+  encrypteOne(msg: any) {
+    if (msg == null) return null;
+    const iv = process.env.INIT_VECTOR;
+    const key = process.env.ENCRYPT_KEY;
+    msg.text = CryptoJS.AES.encrypt(msg.text, key, { iv }).toString();
+    return msg;
+  }
+  decryptOne(msg: any) {
+    if (msg == null) return null;
+
+    if (msg.typeMsg == 'message') {
+      const key = process.env.ENCRYPT_KEY;
+      const iv = process.env.INIT_VECTOR;
+      msg.text = CryptoJS.AES.decrypt(msg.text, key, { iv }).toString(
+        CryptoJS.enc.Utf8,
+      );
+      return msg;
+    } else {
+      return msg;
+    }
+  }
+  decrypt(messages: any[]) {
+    const key = process.env.ENCRYPT_KEY;
+    const iv = process.env.INIT_VECTOR;
+    messages.map((msg) => {
+      if (msg == null) return null;
+
+      if (msg.typeMsg == 'message') {
+        msg.text = CryptoJS.AES.decrypt(msg.text, key, { iv }).toString(
+          CryptoJS.enc.Utf8,
+        );
+      }
+    });
+    return messages;
+  }
+  async getVisibleMessages(idConv: string, idUser: string) {
+    let messages = await this.messageModel
+      .find({ conv: idConv, visibility: { $in: [idUser] } })
+      .exec();
+    //decrypte
+    messages = this.decrypt(messages);
+
+    return messages;
+  }
+  async getLastMessage(idConv: string, idUser: string) {
+    const messages: any = await this.messageModel.find({
+      conv: idConv,
+      visibility: { $in: [idUser] },
+      typeMsg: 'message',
+    });
+    //null case
+    if (messages.length == 0) return null;
+    let message = messages[messages.length - 1];
+    //decrypte
+    message = this.decryptOne(message);
+
+    return message;
+  }
   findAll() {
     return this.messageModel.find().exec();
   }
   async findAllMessageOfConv(idConv: string) {
     let messages = await this.messageModel.find({ conv: idConv }).exec();
-    // for (let i = 0; i < msgs.length; i++) {
-    //   const msg = msgs[i];
-    //   const user = await this.userService.findeUserForMessage(msg.sender);
-    //   msg.sender = user;
-    // }
-    messages = await this.fillSenderAndRef(messages);
-
+    messages = await this.fillFields(messages);
     return messages;
   }
+  async setRecievedBy(body: { idReciever: string; idMessage: string }) {
+    await this.messageModel
+      .updateOne(
+        { _id: body.idMessage },
+        { $addToSet: { recievedBy: body.idReciever } },
+      )
+      .exec();
 
+    let message = await this.messageModel.findById(body.idMessage).exec();
+    if (message == null) {
+      return;
+    }
+    //decrypte message text
+    message = this.decryptOne(message);
+    //set recievedBy event to update convs msgs
+    this.webSocketService.onRecievedMessage(message);
+    //set sender
+    message.sender = await this.userService.findConfidentialUser(
+      message.sender,
+    );
+    //set ref
+    if (message.ref != '' && message.ref != null && message.ref != undefined) {
+      message.ref = await this.messageModel.findById(message.ref);
+    }
+
+    return message;
+  }
   async getMessageSearchedGroup(
     idConv: string,
     idMessage: string,
@@ -83,21 +201,18 @@ export class MessageService {
       visibility: { $in: [userId] },
     });
     let limit: number = 20;
-    if (totalCount < 20) {
+
+    if (totalCount <= 20) {
       messages = await this.messageModel
-        .find({ conv: idConv, visibility: { $in: [userId] } })
+        .find({ $and: [{ conv: idConv }, { visibility: { $in: [userId] } }] })
         .exec();
     } else {
-      if (range < 20) {
-        range = 0;
-      } else if (totalCount - range < 20) {
-        limit = totalCount - range;
-      } else {
-        range -= 10;
-        limit = 20;
+      if (totalCount - range < 20) {
+        range = totalCount - 10;
+        limit = 10;
       }
       messages = await this.messageModel
-        .find({ conv: idConv })
+        .find({ $and: [{ conv: idConv }, { visibility: { $in: [userId] } }] })
         .skip(range)
         .limit(limit)
         .exec();
@@ -105,7 +220,10 @@ export class MessageService {
 
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
+    //decrypte
+    messages = this.decrypt(messages);
+
     return messages;
   }
   async findMessageOfConv(idConv: string, idUser: string) {
@@ -130,7 +248,11 @@ export class MessageService {
     }
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+
+    messages = await this.fillFields(messages);
+
+    //decrypte
+    messages = this.decrypt(messages);
 
     return messages;
   }
@@ -143,21 +265,42 @@ export class MessageService {
       })
       .exec();
   }
-  async fillSenderAndRef(messages: any[]) {
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const user = await this.userService.findeUserForMessage(msg.sender);
-      msg.sender = user;
-      if (msg.ref != '') {
-        const repMsg = await this.messageModel.findById(msg.ref);
-        msg.ref = repMsg;
-        const senderRef = await this.userService.findeUserForMessage(
-          msg.ref.sender,
+  async fillFields(messages: any[]): Promise<any[]> {
+    const res = await Promise.all(
+      messages.map(async (msg) => {
+        if (msg.typeMsg == 'notif') {
+          return await this.fillMakerAndRecieverOfNotif(msg);
+        }
+        //set user
+        const user = await this.userService.findConfidentialUser(msg.sender);
+        msg.sender = user;
+        //set ref
+        if (msg.ref != '') {
+          let repMsg = await this.messageModel.findById(msg.ref);
+          //decrypte message text
+          repMsg = this.decryptOne(repMsg);
+          msg.ref = repMsg;
+          const senderRef = await this.userService.findConfidentialUser(
+            msg.ref.sender,
+          );
+          msg.ref.sender = senderRef;
+        }
+        //set reactions
+        const reactions = await this.reactionService.findAllOfMessage(
+          msg._id.toString(),
         );
-        msg.ref.sender = senderRef;
-      }
-    }
-    return messages;
+        msg.reactions = await Promise.all(
+          reactions.map(async (reaction) => {
+            reaction.user = await this.userService.findConfidentialUser(
+              reaction.user,
+            );
+            return reaction;
+          }),
+        );
+        return msg;
+      }),
+    );
+    return res;
   }
   async getRange(idConv: string, idMessage: string, userId?: string) {
     const all = await this.messageModel
@@ -171,12 +314,17 @@ export class MessageService {
       .find({
         conv: idConv,
         visibility: { $in: [idUser] },
-        text: { $regex: key, $options: 'i' },
+        // text: { $regex: key, $options: 'i' },
       })
       .exec();
+    //decrypte
+    messages = this.decrypt(messages);
+    messages = messages.filter((msg) =>
+      msg.text.toLowerCase().includes(key.toLowerCase()),
+    );
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
 
     return messages;
   }
@@ -202,7 +350,9 @@ export class MessageService {
       .exec();
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
+    //decrypte
+    messages = this.decrypt(messages);
 
     return messages;
   }
@@ -223,7 +373,9 @@ export class MessageService {
       .exec();
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
-    messages = await this.fillSenderAndRef(messages);
+    messages = await this.fillFields(messages);
+    //decrypte
+    messages = this.decrypt(messages);
 
     return messages;
   }
@@ -231,7 +383,7 @@ export class MessageService {
   update(id: string, updateMessageDto: UpdateMessageDto) {
     return this.messageModel.updateOne({ _id: id }, updateMessageDto).exec();
   }
-  async setVus(body: any) {
+  async setVus(body: { myId: string; idConv: string }) {
     this.webSocketService.onSetVus(body);
     const id = body.myId;
     //set viewver as Oline
@@ -245,7 +397,7 @@ export class MessageService {
   async remove(id: string): Promise<any> {
     const msg = await this.messageModel.findOne({ _id: id }).exec();
     const files = msg.files;
-    for (let file of files) {
+    files.map((file) => {
       file = file.split('/');
       file = file[file.length - 1];
       fs.access('assets/imagesOfMessages/' + file, fs.constants.F_OK, (err) => {
@@ -261,13 +413,17 @@ export class MessageService {
           // Handle the case where the file exists
         }
       });
-    }
+    });
+    //delete reactions
+    await this.reactionService.removeAllOfMsg(id);
+    //delete message
+    return await this.messageModel.deleteOne({ _id: id }).exec();
   }
   async removeForAll(id: string, idUser: string): Promise<any> {
     const msg = await this.messageModel.findOne({ _id: id }).exec();
     if (msg.sender != idUser) return;
     const files = msg.files;
-    for (let file of files) {
+    files.map((file) => {
       file = file.split('/');
       file = file[file.length - 1];
       fs.access('assets/imagesOfMessages/' + file, fs.constants.F_OK, (err) => {
@@ -283,7 +439,10 @@ export class MessageService {
           // Handle the case where the file exists
         }
       });
-    }
+    });
+    //delete reactions
+    await this.reactionService.removeAllOfMsg(id);
+    //delete message
     await this.messageModel.deleteMany({ _id: id }).exec();
     //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
 
@@ -294,6 +453,19 @@ export class MessageService {
     };
     this.webSocketService.onMessageDeleted(obj);
     return obj;
+  }
+  async pullFromVisibilityOfConv(idConv: string, idUser: string) {
+    return await this.messageModel
+      .updateMany(
+        {
+          conv: idConv,
+          visibility: { $in: [idUser] },
+        },
+        {
+          $pull: { visibility: idUser },
+        },
+      )
+      .exec();
   }
   async deleteForMe(object: any): Promise<any> {
     //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
@@ -316,9 +488,9 @@ export class MessageService {
     const msgsWithMedias = await this.messageModel
       .find({ files: { $exists: true, $ne: [] } })
       .exec();
-    for (const msg of msgsWithMedias) {
+    msgsWithMedias.map((msg) => {
       const files = msg.files;
-      for (let file of files) {
+      files.map((file) => {
         file = file.split('/');
         file = file[file.length - 1];
         fs.access(
@@ -338,8 +510,8 @@ export class MessageService {
             }
           },
         );
-      }
-    }
+      });
+    });
     return this.messageModel.deleteMany().exec();
   }
   removeAllFromConv(idConv: string): any {

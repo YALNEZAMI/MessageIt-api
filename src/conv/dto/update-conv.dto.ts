@@ -9,4 +9,6 @@ export class UpdateConvDto extends PartialType(CreateConvDto) {
   description?: string;
   members?: any[];
   theme?: string;
+  type?: string;
+  admins?: any[];
 }

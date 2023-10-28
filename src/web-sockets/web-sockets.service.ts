@@ -14,6 +14,7 @@ config();
   },
 })
 export class WebSocketsService {
+  constructor() {}
   @WebSocketServer()
   server: Server;
   //when a new connection occurs, the server logs ‘new connection’ message
@@ -23,11 +24,11 @@ export class WebSocketsService {
   //     console.log('new connection');
   //   });
   // }
-  //declaration of an event called ‘userAdded’ which can be used within methods(like methods dealing with http requests)
   @SubscribeMessage('newMessage')
   onNewMessage(@MessageBody() body: any) {
     this.server.emit('newMessage', body);
   }
+
   @SubscribeMessage('setVus')
   onSetVus(@MessageBody() body: any) {
     this.server.emit('setVus', body);
@@ -53,5 +54,49 @@ export class WebSocketsService {
   @SubscribeMessage('lastMsg')
   lastMsg(@MessageBody() msg: any) {
     this.server.emit('lastMsg', msg);
+  }
+  @SubscribeMessage('removeFromGroupe')
+  onRemoveFromGroupe(@MessageBody() object: { idUser: string; conv: any }) {
+    this.server.emit('removeFromGroupe', object);
+  }
+  @SubscribeMessage('createConv')
+  OnCreateConv(@MessageBody() conv: any) {
+    this.server.emit('createConv', conv);
+  }
+  @SubscribeMessage('addMemberToGroupe')
+  onAddMemberToGroupe(@MessageBody() convAndNewMembers: any) {
+    this.server.emit('addMemberToGroupe', convAndNewMembers);
+  }
+  @SubscribeMessage('leaveConv')
+  onLeavingConv(@MessageBody() message: { conv: any; leaver: any }) {
+    this.server.emit('leaveConv', message);
+  }
+  @SubscribeMessage('recievedMessage')
+  onRecievedMessage(@MessageBody() message: any) {
+    this.server.emit('recievedMessage', message);
+  }
+  @SubscribeMessage('login')
+  login(@MessageBody() user: any) {
+    this.server.emit('login', user);
+  }
+  @SubscribeMessage('reaction')
+  reaction(@MessageBody() reaction: any) {
+    this.server.emit('reaction', reaction);
+  }
+  @SubscribeMessage('statusChange')
+  statusChange(@MessageBody() user: any) {
+    this.server.emit('statusChange', user);
+  }
+  @SubscribeMessage('upgardingToAdmin')
+  upgardingToAdmin(@MessageBody() bodyReq: any) {
+    this.server.emit('upgardingToAdmin', bodyReq);
+  }
+  @SubscribeMessage('downgardingAdmin')
+  downgardingAdmin(@MessageBody() bodyReq: any) {
+    this.server.emit('downgardingAdmin', bodyReq);
+  }
+  @SubscribeMessage('convChanged')
+  convChanged(@MessageBody() conv: any) {
+    this.server.emit('convChanged', conv);
   }
 }
