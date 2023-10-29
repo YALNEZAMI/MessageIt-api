@@ -66,29 +66,49 @@ export class UserService {
       user: user,
     };
   }
+  async addOptionsToUser(user: any, myid: string) {
+    const fr = await new Promise((resolve) => {
+      resolve(this.areFriends(myid, user._id));
+    });
+    const iSend = await new Promise((resolve) => {
+      resolve(this.alreadySend(myid, user._id));
+    });
+    const heSend = await new Promise((resolve) => {
+      resolve(this.alreadySend(user._id, myid));
+    });
+
+    if (fr) {
+      user.operation = 'remove';
+    } else if (iSend) {
+      user.operation = 'cancel';
+    } else if (heSend) {
+      user.operation = 'accept';
+    } else if (!fr) {
+      user.operation = 'add';
+    }
+
+    return user;
+  }
   async addOptionsToUsers(users: any[], myid: string) {
     users = await Promise.all(
       users.map(async (user) => {
-        const fr = await new Promise((resolve) => {
-          resolve(this.areFriends(myid, user._id));
-        });
-        const iSend = await new Promise((resolve) => {
-          resolve(this.alreadySend(myid, user._id));
-        });
-        const heSend = await new Promise((resolve) => {
-          resolve(this.alreadySend(user._id, myid));
-        });
+        const fr = await this.areFriends(myid, user._id);
+        const iSend = await this.alreadySend(myid, user._id);
+        const heSend = await this.alreadySend(user._id, myid);
 
         if (fr) {
           user.operation = 'remove';
+          return user;
         } else if (iSend) {
           user.operation = 'cancel';
+          return user;
         } else if (heSend) {
           user.operation = 'accept';
+          return user;
         } else if (!fr) {
           user.operation = 'add';
+          return user;
         }
-        return user;
       }),
     );
     //remove me from users
@@ -96,6 +116,7 @@ export class UserService {
     users = users.filter((user) => {
       return user._id.toString() != myid;
     });
+
     return users;
   }
   findAll() {
@@ -179,7 +200,7 @@ export class UserService {
           await this.update(user._id, { lastConnection: new Date() });
           //set websocket subscription to notify friends
 
-          const confidentielUser = await this.UserModel.findOne(
+          const confidentielUser: any = await this.UserModel.findOne(
             { _id: user._id },
             {
               password: 0,
@@ -187,7 +208,17 @@ export class UserService {
             },
           );
           this.webSocketService.login(confidentielUser);
-
+          //fill friends
+          confidentielUser.friends = await Promise.all(
+            confidentielUser.friends.map(async (friend: any) => {
+              friend = await this.findConfidentialUser(friend);
+              friend = await this.addOptionsToUser(
+                friend,
+                confidentielUser._id,
+              );
+              return friend;
+            }),
+          );
           return {
             status: 200,
             message: 'Success, you can login !',
@@ -327,20 +358,17 @@ export class UserService {
 
   //friendShip methods
   async addReq(addReq: any) {
-    await this.UserModel.updateOne(
-      { _id: addReq.reciever },
-      {
-        $addToSet: { addReqs: addReq.sender },
-      },
-    );
+    const date = new Date();
+    await this.pushAddReq(addReq.sender, addReq.reciever);
     const sender = await this.findConfidentialUser(addReq.sender);
-    sender.operation = 'cancel';
+    sender.operation = 'accept';
     const reciever = await this.findConfidentialUser(addReq.reciever);
-    reciever.operation = 'accept';
+    reciever.operation = 'cancel';
     //set websocket subscription to notify reciever
     this.webSocketService.addFriend({
       sender: sender,
       reciever: reciever,
+      date: date,
     });
     return sender;
   }
@@ -351,13 +379,22 @@ export class UserService {
     try {
       return this.UserModel.findOne(
         { _id: id },
-        { password: 0, email: 0, codePassword: 0, addReqs: 0, friends: 0 },
+        {
+          password: 0,
+          email: 0,
+          codePassword: 0,
+          addReqs: 0,
+          friends: 0,
+          accepters: 0,
+        },
       );
     } catch (error) {
       console.log(error);
     }
   }
   async removeFriend(myId: string, FriendId: string) {
+    //set web socket subscription to notify concerned ppl
+    this.webSocketService.onRemoveFriend({ remover: myId, removed: FriendId });
     await this.UserModel.updateOne(
       { _id: FriendId },
       { $pull: { friends: myId } },
@@ -367,38 +404,68 @@ export class UserService {
       { $pull: { friends: FriendId } },
     );
   }
-  refuseFriend(refuser: string, refued: string) {
-    return this.UserModel.updateOne(
-      { _id: refuser },
-      { $pull: { addReqs: refued } },
-    );
+  refuseFriend(refuser: string, refused: string) {
+    this.webSocketService.cancelFriend({
+      canceler: refuser,
+      canceled: refused,
+    });
+    return this.pullAddReq(refused, refuser);
   }
-  cancel(canceler: string, canceled: string) {
+  async pullAddReq(sender: string, recieverId: string) {
+    const reciever = await this.UserModel.findOne({ _id: recieverId }).exec();
+    let addreqs = reciever.addReqs;
+    addreqs = addreqs.filter((addreq: any) => {
+      return addreq.id != sender;
+    });
+
+    return this.UserModel.updateOne({ _id: recieverId }, { addReqs: addreqs });
+  }
+  async pushAddReq(sender: string, recieverId: string) {
+    const date = new Date();
+    const reciever = await this.UserModel.findOne({ _id: recieverId }).exec();
+    const addreqs = reciever.addReqs;
+    addreqs.map((addreq: any) => {
+      if (addreq.id == sender) {
+        return null;
+      }
+    });
+    addreqs.push({ id: sender, date: date });
+    return this.UserModel.updateOne({ _id: recieverId }, { addReqs: addreqs });
+  }
+  async cancel(canceler: string, canceled: string) {
     this.webSocketService.cancelFriend({
       canceler: canceler,
       canceled: canceled,
     });
-    return this.UserModel.updateOne(
-      { _id: canceled },
-      { $pull: { addReqs: canceler } },
-    );
+    //pull addreq
+    return await this.pullAddReq(canceler, canceled);
   }
   async accept(myId: string, FriendId: string) {
-    //remove from addReqs and add to friends
-    await this.UserModel.updateOne(
-      { _id: myId },
-      { $pull: { addReqs: FriendId } },
-    ).exec();
+    const date = new Date();
     //add to friends of both
     const firstAdd = await this.UserModel.updateOne(
       { _id: myId },
       { $addToSet: { friends: FriendId } },
     );
+    //pull addreq
+    await this.pullAddReq(FriendId, myId);
     const secAdd = await this.UserModel.updateOne(
       { _id: FriendId },
-      { $addToSet: { friends: myId } },
+      {
+        $addToSet: { friends: myId, accepters: { id: myId, date: date } },
+      },
     );
+    //set web socket subscription to notify reciever
+    const accepter = await this.findConfidentialUser(myId);
+    accepter.operation = 'remove';
+    const accepted = await this.findConfidentialUser(FriendId);
+    accepted.operation = 'remove';
 
+    this.webSocketService.acceptFriend({
+      accepter: accepter,
+      accepted: accepted,
+      date: date,
+    });
     return { firstAdd, secAdd };
   }
   async areFriends(myId: string, FriendId: string) {
@@ -417,19 +484,22 @@ export class UserService {
     }
   }
 
-  async alreadySend(sender: string, reciever: string) {
+  async alreadySend(sender: string, recieverId: string) {
     sender = sender.toString();
-    reciever = reciever.toString();
+    recieverId = recieverId.toString();
 
-    const res = await this.UserModel.findOne({
-      _id: reciever,
-      addReqs: { $in: [sender] },
+    const reciever = await this.UserModel.findOne({
+      _id: recieverId,
     }).exec();
-    if (res === null) {
-      return false;
-    } else {
-      return true;
+    const addreqs = reciever.addReqs;
+
+    for (let i = 0; i < addreqs.length; i++) {
+      const addreq = addreqs[i];
+      if (addreq.id == sender) {
+        return true;
+      }
     }
+    return false;
   }
   async getMyFriends(id: string) {
     const me: any = await this.UserModel.findById(id).exec();
@@ -440,18 +510,31 @@ export class UserService {
     users = await this.addOptionsToUsers(users, id);
     return users;
   }
-  async findreqSentToMe(id: string) {
-    let res: any[] = [];
+  async getNotifs(id: string) {
+    const res: any[] = [];
     const me = await this.UserModel.findById(id).exec();
     const myAddReqs = me.addReqs;
+    const accepters = me.accepters;
+    if (myAddReqs.length == 0 && accepters.length == 0) {
+      return res;
+    }
     await Promise.all(
-      myAddReqs.map(async (element) => {
-        const user = await this.UserModel.findById(element).exec();
-        res.push(user);
+      myAddReqs.map(async (addreq) => {
+        const user = await this.findConfidentialUser(addreq.id);
+        user.operation = 'accept';
+        res.push({ user: user, date: addreq.date });
       }),
     );
-
-    res = await this.addOptionsToUsers(res, id);
+    await Promise.all(
+      accepters.map(async (accepter) => {
+        const user = await this.findConfidentialUser(accepter.id);
+        user.operation = 'remove';
+        res.push({ user: user, date: accepter.date });
+      }),
+    );
+    res.sort((a, b) => {
+      return b.date - a.date;
+    });
     return res;
   }
   async friendsToAdd(idUser: string, members: string[]) {
@@ -465,5 +548,8 @@ export class UserService {
     });
 
     return friends;
+  }
+  resetAccepters(id: string) {
+    return this.UserModel.updateOne({ _id: id }, { accepters: [] }).exec();
   }
 }

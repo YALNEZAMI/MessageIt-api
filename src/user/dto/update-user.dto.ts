@@ -9,10 +9,11 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   password?: string;
   password2?: string;
   photo?: string;
-  addReqs?: string[];
+  addReqs?: any[];
   friends?: string[];
   status?: string;
   codePassword?: number;
   lastConnection?: Date;
   theme?: string;
+  accepters?: any[];
 }

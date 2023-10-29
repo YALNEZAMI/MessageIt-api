@@ -51,6 +51,10 @@ export class WebSocketsService {
   cancelFriend(@MessageBody() object: any) {
     this.server.emit('cancelFriend', object);
   }
+  @SubscribeMessage('acceptFriend')
+  acceptFriend(@MessageBody() object: any) {
+    this.server.emit('acceptFriend', object);
+  }
   @SubscribeMessage('lastMsg')
   lastMsg(@MessageBody() msg: any) {
     this.server.emit('lastMsg', msg);
@@ -102,5 +106,9 @@ export class WebSocketsService {
   @SubscribeMessage('convChanged')
   convChanged(@MessageBody() conv: any) {
     this.server.emit('convChanged', conv);
+  }
+  @SubscribeMessage('onRemoveFriend')
+  onRemoveFriend(@MessageBody() obj: { remover: string; removed: string }) {
+    this.server.emit('onRemoveFriend', obj);
   }
 }

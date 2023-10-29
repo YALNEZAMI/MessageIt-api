@@ -87,6 +87,17 @@ export class ConvService {
    * @returns the conversation created
    */
   async create(createConvDto: CreateConvDto) {
+    if (
+      !this.userService.areFriends(
+        createConvDto.members[0],
+        createConvDto.members[1],
+      )
+    ) {
+      return {
+        error:
+          "you can't create a conversation with a user that you are not friends with",
+      };
+    }
     //set theme
     if (createConvDto.theme == undefined) {
       createConvDto.theme = 'basic';
