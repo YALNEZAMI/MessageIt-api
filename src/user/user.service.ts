@@ -358,8 +358,10 @@ export class UserService {
 
   //friendShip methods
   async addReq(addReq: any) {
+    //push add req to reciever
     const date = new Date();
     await this.pushAddReq(addReq.sender, addReq.reciever);
+    //prepare web socket subscription body
     const sender = await this.findConfidentialUser(addReq.sender);
     sender.operation = 'accept';
     const reciever = await this.findConfidentialUser(addReq.reciever);
@@ -369,6 +371,7 @@ export class UserService {
       sender: sender,
       reciever: reciever,
       date: date,
+      type: 'addReq',
     });
     return sender;
   }
@@ -465,6 +468,7 @@ export class UserService {
       accepter: accepter,
       accepted: accepted,
       date: date,
+      type: 'acceptation',
     });
     return { firstAdd, secAdd };
   }
@@ -522,14 +526,14 @@ export class UserService {
       myAddReqs.map(async (addreq) => {
         const user = await this.findConfidentialUser(addreq.id);
         user.operation = 'accept';
-        res.push({ user: user, date: addreq.date });
+        res.push({ user: user, date: addreq.date, type: 'addReq' });
       }),
     );
     await Promise.all(
       accepters.map(async (accepter) => {
         const user = await this.findConfidentialUser(accepter.id);
         user.operation = 'remove';
-        res.push({ user: user, date: accepter.date });
+        res.push({ user: user, date: accepter.date, type: 'acceptation' });
       }),
     );
     res.sort((a, b) => {
