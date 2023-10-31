@@ -544,10 +544,9 @@ export class ConvService {
     if (conv == null) return { error: 'conv not found' };
     conv = await this.fillMembers(conv);
 
-    conv.members = conv.members
-      .filter((member: any) => member._id != id)
-      .map((member: any) => member._id.toString());
-    const visibility = conv.members;
+    conv.members = conv.members.filter((member: any) => member._id != id);
+    const membersIds = conv.members.map((member: any) => member._id.toString());
+    const visibility = membersIds;
     const notif = {
       visibility: visibility,
       conv: idConv,
@@ -565,13 +564,26 @@ export class ConvService {
         leaver: leaver,
       });
     } else {
-      await this.ConvModel.updateOne(
-        { _id: idConv },
-        {
-          members: conv.members,
-          $pull: { admins: id },
-        },
-      );
+      //chef is leaver case
+      if (leaver._id.toString() == conv.chef) {
+        await this.ConvModel.updateOne(
+          { _id: idConv },
+          {
+            chef: membersIds[0],
+            members: membersIds,
+            $pull: { admins: id },
+          },
+        );
+        conv.chef = membersIds[0];
+      } else {
+        await this.ConvModel.updateOne(
+          { _id: idConv },
+          {
+            members: membersIds,
+            $pull: { admins: id },
+          },
+        );
+      }
 
       conv = await this.setNameAndPhoto(conv, id);
       //set websocket to notify the members of the new members
@@ -611,6 +623,7 @@ export class ConvService {
   typing(object: any) {
     this.webSocketsService.typing(object);
   }
+  //FIXME why admin is not seeing messages
   async removeFromGroupe(idUser: string, idAdmin: string, idConv: string) {
     let conv = await this.findOne(idConv);
     //checks

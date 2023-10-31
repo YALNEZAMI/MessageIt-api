@@ -189,6 +189,7 @@ export class UserService {
           delete user.password;
           user.password = '';
           //set as online
+          //TODO set setinterval to check status
           setTimeout(async () => {
             const lastConnection: any = user.lastConnection;
             const now: any = new Date();
