@@ -79,7 +79,7 @@ export class MessageService {
   }
   async fillMakerAndRecieverOfNotif(notif: any) {
     notif.maker = await this.userService.findConfidentialUser(notif.maker);
-    if (notif.reciever != undefined) {
+    if (notif.reciever != undefined && notif.reciever != '') {
       notif.reciever = await this.userService.findConfidentialUser(
         notif.reciever,
       );
@@ -144,13 +144,15 @@ export class MessageService {
     const messages: any = await this.messageModel.find({
       conv: idConv,
       visibility: { $in: [idUser] },
-      typeMsg: 'message',
+      // typeMsg: 'message',
     });
     //null case
     if (messages.length == 0) return null;
     let message = messages[messages.length - 1];
     //decrypte
-    message = this.decryptOne(message);
+    if (message.typeMsg == 'message') {
+      message = this.decryptOne(message);
+    }
 
     return message;
   }
@@ -170,9 +172,19 @@ export class MessageService {
       )
       .exec();
 
-    let message = await this.messageModel.findById(body.idMessage).exec();
+    let message: any = await this.messageModel.findById(body.idMessage).exec();
     if (message == null) {
       return;
+    }
+    if (message.typeMsg == 'notif') {
+      message.maker = await this.userService.findConfidentialUser(
+        message.maker,
+      );
+      if (message.reciever != '' && message.reciever != undefined) {
+        message.reciever = await this.userService.findConfidentialUser(
+          message.reciever,
+        );
+      }
     }
     //decrypte message text
     message = this.decryptOne(message);

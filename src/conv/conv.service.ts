@@ -116,9 +116,9 @@ export class ConvService {
       //set type
       if (createConvDto.members.length > 2) {
         createConvDto.type = 'groupe';
+        createConvDto.admins = [];
       } else {
         createConvDto.type = 'private';
-        createConvDto.admins = [];
       }
       const convCreated = await this.ConvModel.create(createConvDto);
       const newId = convCreated._id.toString();
@@ -175,6 +175,7 @@ export class ConvService {
   async getMembers(idConv: string, myId: string) {
     let res: any[] = [];
     const conv: any = await this.findOne(idConv);
+    if (conv == null) return null;
     const UserIds: string[] = conv.members;
     await Promise.all(
       UserIds.map(async (element) => {
@@ -225,6 +226,7 @@ export class ConvService {
           });
 
           conv.lastMessage = lastMessageFinal;
+
           //set notif web socket
           //TODO undestande this notif
           this.webSocketsService.onRecievedMessage(lastMessageFinal);
@@ -384,6 +386,7 @@ export class ConvService {
         maker: admin._id,
         typeMsg: 'notif',
         sous_type: 'convNameChanged',
+        reciever: '',
       });
     }
     if (updateConvDto.description != conv.description) {
@@ -394,6 +397,7 @@ export class ConvService {
         maker: admin._id,
         typeMsg: 'notif',
         sous_type: 'convDescriptionChanged',
+        reciever: '',
       });
     }
     if (updateConvDto.theme != conv.theme) {
@@ -404,6 +408,7 @@ export class ConvService {
         maker: admin._id,
         typeMsg: 'notif',
         sous_type: 'convThemeChanged',
+        reciever: '',
       });
     }
     if (file == undefined) {
@@ -422,6 +427,7 @@ export class ConvService {
       maker: admin._id,
       typeMsg: 'notif',
       sous_type: 'convPhotoChanged',
+      reciever: '',
     });
     const filepath = process.env.api_url + '/user/uploads/' + file.filename;
     updateConvDto.photo = filepath;
@@ -528,40 +534,47 @@ export class ConvService {
    * @returns  the conversation deleted if the user is the last member, the conversation updated if not
    */
   async leaveConv(id: string, idConv: string): Promise<any> {
+    //get leaver
+    const leaver = await this.userService.findConfidentialUser(id);
+
     //make messages not visible any more
     await this.messageService.pullFromVisibilityOfConv(idConv, id);
     //set conv notifs
     let conv: any = await this.ConvModel.findById(idConv);
+    if (conv == null) return { error: 'conv not found' };
     conv = await this.fillMembers(conv);
 
-    const members = conv.members
+    conv.members = conv.members
       .filter((member: any) => member._id != id)
       .map((member: any) => member._id.toString());
     const visibility = conv.members;
-
-    await this.messageService.createNotif({
+    const notif = {
       visibility: visibility,
       conv: idConv,
       maker: id,
       typeMsg: 'notif',
       sous_type: 'leaveConv',
-    });
+      reciever: '',
+    };
+    await this.messageService.createNotif(notif);
 
-    if (members.length == 0) {
-      return this.remove(idConv);
+    if (conv.members.length == 0) {
+      await this.remove(idConv);
+      this.webSocketsService.onLeavingConv({
+        conv: conv,
+        leaver: leaver,
+      });
     } else {
       await this.ConvModel.updateOne(
         { _id: idConv },
         {
-          members: members,
+          members: conv.members,
           $pull: { admins: id },
         },
       );
-      //set updated members of the conversation
 
       conv = await this.setNameAndPhoto(conv, id);
       //set websocket to notify the members of the new members
-      const leaver = this.userService.findConfidentialUser(id);
       this.webSocketsService.onLeavingConv({
         conv: conv,
         leaver: leaver,
@@ -581,7 +594,7 @@ export class ConvService {
       }),
     );
   }
-  makeGroupe(conv: any) {
+  async makeGroupe(conv: any) {
     conv.photo = process.env.api_url + '/user/uploads/group.png';
     conv.lastMessage = null;
     if (conv.name == '') {
@@ -589,7 +602,11 @@ export class ConvService {
     }
     conv.description = 'Write a description...';
     conv.theme = 'basic';
-    return this.ConvModel.create(conv);
+    let finaleConv: any = await this.ConvModel.create(conv);
+    //set web socket
+    finaleConv = await this.fillMembers(finaleConv);
+    this.webSocketsService.OnCreateConv(finaleConv);
+    return finaleConv;
   }
   typing(object: any) {
     this.webSocketsService.typing(object);

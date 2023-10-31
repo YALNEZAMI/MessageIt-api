@@ -355,7 +355,7 @@ export class UserService {
   deleteAll(): any {
     return this.UserModel.deleteMany().exec();
   }
-
+  //FIXME why does status alternate in private conv on change
   //friendShip methods
   async addReq(addReq: any) {
     //push add req to reciever

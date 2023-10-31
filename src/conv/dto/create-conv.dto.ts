@@ -27,7 +27,7 @@ export class CreateConvDto {
   type: string;
   //admins of the conversation
   @Column()
-  admins: any[];
+  admins?: any[];
   //date of creation
   @Column()
   createdAt: Date;
