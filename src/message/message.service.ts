@@ -483,8 +483,11 @@ export class MessageService {
   async deleteForMe(object: any): Promise<any> {
     //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
     const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
+    if (msg == null) return;
     object.operation = 'deleteForMe';
-    object.msg = await this.fillFields([msg]);
+
+    const tab = await this.fillFields([msg]);
+    object.msg = tab[0];
     this.webSocketService.onMessageDeleted(object);
 
     if (msg.visibility.length == 1) {

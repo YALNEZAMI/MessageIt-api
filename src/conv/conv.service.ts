@@ -623,7 +623,6 @@ export class ConvService {
   typing(object: any) {
     this.webSocketsService.typing(object);
   }
-  //FIXME why admin is not seeing messages
   async removeFromGroupe(idUser: string, idAdmin: string, idConv: string) {
     let conv = await this.findOne(idConv);
     //checks
