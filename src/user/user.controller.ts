@@ -75,7 +75,6 @@ export class UserController {
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     const res = await this.userService.update(id, updateUserDto);
-
     return res;
   }
   @Patch('resetAccepters/:id')

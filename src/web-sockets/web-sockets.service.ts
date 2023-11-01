@@ -91,6 +91,7 @@ export class WebSocketsService {
   statusChange(@MessageBody() user: any) {
     this.server.emit('statusChange', user);
   }
+
   @SubscribeMessage('upgardingToAdmin')
   upgardingToAdmin(@MessageBody() conv: any) {
     this.server.emit('upgardingToAdmin', conv);
@@ -110,5 +111,9 @@ export class WebSocketsService {
   @SubscribeMessage('onRemoveFriend')
   onRemoveFriend(@MessageBody() obj: { remover: string; removed: string }) {
     this.server.emit('onRemoveFriend', obj);
+  }
+  @SubscribeMessage('someUserUpdated')
+  someUserUpdated(@MessageBody() user: any) {
+    this.server.emit('someUserUpdated', user);
   }
 }

@@ -12,15 +12,18 @@ export class SessionService {
   //set status to online for 5mins and return user
   async setStatus(id: string) {
     try {
-      setTimeout(async () => {
-        const user = await this.userService.findOne(id);
-        const lastConnection: any = user.lastConnection;
-        const now: any = new Date();
-        const diff = now - lastConnection;
-        if (diff > 300000) {
-          await this.userService.update(id, { status: 'offline' });
-        }
-      }, 305000);
+      setTimeout(
+        async () => {
+          const user = await this.userService.findOne(id);
+          const lastConnection: any = user.lastConnection;
+          const now: any = new Date();
+          const diff = now - lastConnection;
+          if (diff > 1000 * 60 * 5) {
+            await this.userService.update(id, { status: 'offline' });
+          }
+        },
+        1000 * 60 * 5 + 1000,
+      );
       await this.userService.update(id, {
         status: 'online',
         lastConnection: new Date(),

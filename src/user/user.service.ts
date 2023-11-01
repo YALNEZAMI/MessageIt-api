@@ -247,20 +247,23 @@ export class UserService {
         updateUserDto.password2 = updateUserDto.password2.trim();
         updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
         await this.UserModel.updateOne({ _id: id }, updateUserDto).exec();
-
+        //notify other of changes
+        const userFinal = await this.findConfidentialUser(id);
+        this.webSocketService.someUserUpdated(userFinal);
         return this.UserModel.findOne({ _id: id }, { password: 0 }).exec();
       } else {
         return this.UserModel.findOne({ _id: id }, { password: 0 }).exec();
       }
     } else {
-      // const updateing =
       await this.UserModel.updateOne({ _id: id }, updateUserDto).exec();
 
       const user = await this.UserModel.findOne(
         { _id: id },
         { password: 0, codePassword: 0 },
       ).exec();
-
+      //notify other of changes
+      const userFinal = await this.findConfidentialUser(id);
+      this.webSocketService.someUserUpdated(userFinal);
       return user;
     }
   }
@@ -330,6 +333,10 @@ export class UserService {
     }
     const photoName = process.env.api_url + '/user/uploads/' + file.filename;
     await this.UserModel.updateOne({ _id: id }, { photo: photoName });
+    //notify other of changes
+
+    const userFinal = await this.findConfidentialUser(id);
+    this.webSocketService.someUserUpdated(userFinal);
     return { photo: photoName };
   }
   async remove(id: string): Promise<any> {
