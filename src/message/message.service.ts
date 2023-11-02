@@ -40,7 +40,7 @@ export class MessageService {
     createMessageDto.vus = [];
     createMessageDto.vus.push(createMessageDto.sender);
     //set the user online
-    await this.sessionService.setStatus(createMessageDto.sender);
+    await this.sessionService.setStatusOnline(createMessageDto.sender);
     //files
     const filesNames = [];
 
@@ -254,6 +254,7 @@ export class MessageService {
     } else {
       messages = await this.messageModel
         .find({ conv: idConv, visibility: { $in: [idUser] } })
+
         .skip(skip)
         .limit(limit)
         .exec();
@@ -368,25 +369,35 @@ export class MessageService {
 
     return messages;
   }
-
+  //FIXME : appendUp
   async appendUp(idConv: string, idMessage: string, userId: string) {
-    let range = await this.getRange(idConv, idMessage, userId);
-    if (range == 0) return [];
+    console.log('idmessage', idMessage);
+    //get The range of last message
+    let skip = await this.getRange(idConv, idMessage, userId);
+    console.log('skip', skip);
+    //get the total number of messages
+    const totalCount = await this.messageModel.countDocuments({
+      conv: idConv,
+      visibility: { $in: [userId] },
+    });
+    console.log('total', totalCount);
+    //deal with exeption cases
+    if (skip == 0) return [];
     let limit: number = 20;
-    if (range < 20) {
-      limit = range;
-      range = 0;
+    if (totalCount - skip <= 20) {
+      limit = skip;
+      skip = 0;
     }
-
+    //get messages from database
     let messages = await this.messageModel
       .find({ conv: idConv, visibility: { $in: [userId] } })
-      .skip(range)
+      .skip(skip)
       .limit(limit)
       .exec();
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
     messages = await this.fillFields(messages);
-    //decrypte
+    //decrypte messages textes
     messages = this.decrypt(messages);
 
     return messages;
@@ -399,7 +410,7 @@ export class MessageService {
     this.webSocketService.onSetVus(body);
     const id = body.myId;
     //set viewver as Oline
-    this.sessionService.setStatus(id);
+    this.sessionService.setStatusOnline(id);
     const idConv = body.idConv;
     this.messageModel
       .updateMany({ conv: idConv }, { $addToSet: { vus: id } })

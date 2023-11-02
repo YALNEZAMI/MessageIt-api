@@ -196,6 +196,7 @@ export class ConvService {
   async getLastMessage(idConv: string, idUser: string) {
     return await this.messageService.getLastMessage(idConv, idUser);
   }
+
   /**
    *
    * @param id the id of the user
@@ -203,7 +204,7 @@ export class ConvService {
    */
   async getMyConvs(id: string) {
     //set the user online
-    await this.sessionService.setStatus(id);
+    await this.sessionService.setStatusOnline(id);
     //get all conversations of the user
     let myConvs: any = await this.convOfUser(id);
 
@@ -214,10 +215,19 @@ export class ConvService {
         conv = await this.fillMembers(conv);
         //set name and photo
         conv = await this.setNameAndPhoto(conv, id);
-
         //set last message
         const lastMessage = await this.getLastMessage(conv._id.toString(), id);
-
+        const messages = await this.messageService.findMessageOfConv(
+          conv._id.toString(),
+          id,
+        );
+        conv.messages = messages;
+        //set medias
+        const medias = await this.messageService.getMedias(
+          conv._id.toString(),
+          id,
+        );
+        conv.medias = medias;
         //set last message as recieved
         if (lastMessage != null) {
           const lastMessageFinal = await this.messageService.setRecievedBy({
@@ -228,7 +238,7 @@ export class ConvService {
           conv.lastMessage = lastMessageFinal;
 
           //set notif web socket
-          //TODO undestande this notif
+          //TODO undestande this notif/maybe to marque the reception of all messages
           this.webSocketsService.onRecievedMessage(lastMessageFinal);
         }
         return conv;
@@ -241,7 +251,6 @@ export class ConvService {
       const bDate = b.lastMessage ? b.lastMessage.date : b.createdAt;
       return bDate - aDate;
     });
-
     return myConvs;
   }
   /**

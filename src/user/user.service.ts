@@ -67,15 +67,9 @@ export class UserService {
     };
   }
   async addOptionsToUser(user: any, myid: string) {
-    const fr = await new Promise((resolve) => {
-      resolve(this.areFriends(myid, user._id));
-    });
-    const iSend = await new Promise((resolve) => {
-      resolve(this.alreadySend(myid, user._id));
-    });
-    const heSend = await new Promise((resolve) => {
-      resolve(this.alreadySend(user._id, myid));
-    });
+    const fr = await this.areFriends(myid, user._id);
+    const iSend = await this.alreadySend(myid, user._id);
+    const heSend = await this.alreadySend(user._id, myid);
 
     if (fr) {
       user.operation = 'remove';
@@ -189,15 +183,17 @@ export class UserService {
           delete user.password;
           user.password = '';
           //set as online
-          //TODO set setinterval to check status
-          setTimeout(async () => {
-            const lastConnection: any = user.lastConnection;
-            const now: any = new Date();
-            const diff = now - lastConnection;
-            if (diff > 300000) {
-              await this.update(user._id, { status: 'offline' });
-            }
-          }, 305000);
+          // setTimeout(
+          //   async () => {
+          //     const lastConnection: any = user.lastConnection;
+          //     const now: any = new Date();
+          //     const diff = now - lastConnection;
+          //     if (diff > 1000 * 60 * 5) {
+          //       await this.update(user._id, { status: 'offline' });
+          //     }
+          //   },
+          //   1000 * 60 * 5 + 1000,
+          // );
           await this.update(user._id, { lastConnection: new Date() });
           //set websocket subscription to notify friends
 
@@ -208,6 +204,7 @@ export class UserService {
               codePassword: 0,
             },
           );
+          if (confidentielUser == null) return;
           this.webSocketService.login(confidentielUser);
           //fill friends
           confidentielUser.friends = await Promise.all(
@@ -230,6 +227,8 @@ export class UserService {
         }
       }
     } catch (error) {
+      console.log(error);
+
       return { status: 501, message: 'Please close the app and retry !' };
     }
   }
@@ -341,6 +340,7 @@ export class UserService {
   }
   async remove(id: string): Promise<any> {
     const user = await this.UserModel.findOne({ _id: id }).exec();
+    if (user == null) return;
     let oldPhoto = user.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
     oldPhoto = nameOldPhotoSplit[nameOldPhotoSplit.length - 1];
@@ -525,6 +525,7 @@ export class UserService {
   async getNotifs(id: string) {
     const res: any[] = [];
     const me = await this.UserModel.findById(id).exec();
+    if (me == null) return res;
     const myAddReqs = me.addReqs;
     const accepters = me.accepters;
     if (myAddReqs.length == 0 && accepters.length == 0) {
