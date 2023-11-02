@@ -34,10 +34,13 @@ export class SessionService {
   //set status to online for 5mins and return user
   async setStatusOnline(id: string) {
     try {
-      await this.userService.update(id, {
-        status: 'online',
-        lastConnection: new Date(),
-      });
+      await this.userService.updateOne(
+        { _id: id },
+        {
+          status: 'online',
+          lastConnection: new Date(),
+        },
+      );
       const finalUser = await this.userService.findConfidentialUser(id);
       //set online websocket
       this.webSocketService.statusChange(finalUser);
@@ -48,9 +51,9 @@ export class SessionService {
   async setStatusMannualy(id: string, body: any) {
     try {
       if (body.status === 'online') {
-        this.setStatusOnline(id);
+        await this.setStatusOnline(id);
       } else {
-        this.userService.update(id, { status: body.status });
+        await this.userService.updateOne({ _id: id }, { status: body.status });
         const finalUser = await this.userService.findConfidentialUser(id);
         //set online websocket
         this.webSocketService.statusChange(finalUser);

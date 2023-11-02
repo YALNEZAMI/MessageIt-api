@@ -232,7 +232,9 @@ export class UserService {
       return { status: 501, message: 'Please close the app and retry !' };
     }
   }
-
+  async updateOne(filter: any, update: any) {
+    return await this.UserModel.updateMany(filter, update).exec();
+  }
   async update(id: string, updateUserDto: UpdateUserDto) {
     if (id == 'undefined') {
       return null;
