@@ -20,7 +20,11 @@ export class SessionService {
           const diff = now - lastConnection;
           if (diff > 1000 * 60 * this.periode) {
             await this.userService.update(user._id, { status: 'offline' });
-            console.log('offlined');
+            const finalUser = await this.userService.findConfidentialUser(
+              user._id.toString(),
+            );
+            //set online websocket
+            this.webSocketService.statusChange(finalUser);
           }
         });
       },
