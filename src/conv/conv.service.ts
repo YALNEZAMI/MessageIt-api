@@ -213,6 +213,8 @@ export class ConvService {
       myConvs.map(async (conv: any) => {
         //set the members
         conv = await this.fillMembers(conv);
+        //set operation to members
+        conv.members = await this.addOptionsToUsers(conv.members, id);
         //set name and photo
         conv = await this.setNameAndPhoto(conv, id);
         //set last message
