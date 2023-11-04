@@ -149,14 +149,14 @@ export class UserService {
     if (id == 'undefined') {
       return null;
     }
-
-    const user = await this.UserModel.findOne({ _id: id }).exec();
-    if (user === null) {
-      return null;
-    }
-    user.password = null;
-    user.email = null;
-    user.codePassword = null;
+    const user = await this.UserModel.findOne(
+      { _id: id },
+      {
+        password: 0,
+        codePassword: 0,
+        email: 0,
+      },
+    ).exec();
 
     return user;
   }
@@ -166,7 +166,30 @@ export class UserService {
 
     return await this.UserModel.findOne({ email: email }).exec();
   }
-
+  async findById(id: string) {
+    const confidentielUser: any = await this.UserModel.findOne(
+      { _id: id },
+      {
+        password: 0,
+        codePassword: 0,
+      },
+    );
+    if (confidentielUser == null) return null;
+    this.webSocketService.login(confidentielUser);
+    //fill friends
+    confidentielUser.friends = await Promise.all(
+      confidentielUser.friends.map(async (friend: any) => {
+        friend = await this.findConfidentialUser(friend);
+        friend.operation = 'remove';
+        // friend = await this.addOptionsToUser(
+        //   friend,
+        //   confidentielUser._id,
+        // );
+        return friend;
+      }),
+    );
+    return confidentielUser;
+  }
   async login(data: any): Promise<any> {
     try {
       data.password = data.password.trim();
@@ -365,7 +388,6 @@ export class UserService {
   deleteAll(): any {
     return this.UserModel.deleteMany().exec();
   }
-  //FIXME why does status alternate in private conv on change
   //friendShip methods
   async addReq(addReq: any) {
     //push add req to reciever

@@ -369,7 +369,6 @@ export class MessageService {
 
     return messages;
   }
-  //FIXME : appendUp
   async appendUp(idConv: string, idMessage: string, userId: string) {
     console.log('idmessage', idMessage);
     //get The range of last message

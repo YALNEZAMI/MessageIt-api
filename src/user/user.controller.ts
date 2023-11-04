@@ -57,7 +57,7 @@ export class UserController {
     if (id == 'undefined') {
       return null;
     }
-    return this.userService.findOne(id);
+    return this.userService.findById(id);
   }
   @Get('/findreqSentToMe/:id')
   getNotifs(@Param('id') id: string) {

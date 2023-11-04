@@ -238,7 +238,6 @@ export class ConvService {
           conv.lastMessage = lastMessageFinal;
 
           //set notif web socket
-          //TODO undestande this notif/maybe to marque the reception of all messages
           this.webSocketsService.onRecievedMessage(lastMessageFinal);
         }
         return conv;
@@ -319,10 +318,10 @@ export class ConvService {
         }
         //iterate over the members to find out if the name of one of them contains the key word
         conv.members = await Promise.all(
-          conv.members.map(async (member: any) => {
+          conv.members.map(async (member: string) => {
             const user = await this.userService.findOne(member);
             const nameUser = user.firstName + ' ' + user.lastName;
-            if (nameUser.includes(key)) {
+            if (nameUser.includes(key) && member != myid) {
               res.add(conv);
             }
             return member;
