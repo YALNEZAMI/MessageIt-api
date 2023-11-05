@@ -370,16 +370,13 @@ export class MessageService {
     return messages;
   }
   async appendUp(idConv: string, idMessage: string, userId: string) {
-    console.log('idmessage', idMessage);
     //get The range of last message
     let skip = await this.getRange(idConv, idMessage, userId);
-    console.log('skip', skip);
     //get the total number of messages
     const totalCount = await this.messageModel.countDocuments({
       conv: idConv,
       visibility: { $in: [userId] },
     });
-    console.log('total', totalCount);
     //deal with exeption cases
     if (skip == 0) return [];
     let limit: number = 20;

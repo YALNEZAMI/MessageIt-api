@@ -35,9 +35,7 @@ export class ConvService {
         if (user != null) members.push(user);
       }),
     );
-
     conv.members = members;
-
     return conv;
   }
   /**
@@ -652,6 +650,8 @@ export class ConvService {
       conv.members.splice(conv.members.indexOf(idUser), 1);
       //set members
       conv = await this.fillMembers(conv);
+      //set operations
+      conv.members = await this.addOptionsToUsers(conv.members, idAdmin);
       //set websocket notif
       this.webSocketsService.onRemoveFromGroupe({
         idUser: idUser,
@@ -712,6 +712,9 @@ export class ConvService {
     ).exec();
     conv.members = Array.from(set);
     conv = await this.fillMembers(conv);
+    //set operations
+    conv.members = await this.addOptionsToUsers(conv.members, idAdmin);
+
     //set websocket to notify the members of the new members
     const convAndNewMembers = {
       conv: conv,
@@ -726,7 +729,7 @@ export class ConvService {
    */
   async upgradeToAdmin(body: any) {
     //body:{conv,user,admin}
-    const conv = await this.findOne(body.conv._id);
+    let conv = await this.findOne(body.conv._id);
     const admins = conv.admins;
     //check if the user operating the upgrading is the chef
     if (conv.chef != body.chef._id) return conv;
@@ -739,6 +742,12 @@ export class ConvService {
     );
     //set websocket to notify the members of the new admin
     conv.admins = [...admins, body.user._id];
+    //set members
+
+    conv = await this.fillMembers(conv);
+    //set operations
+
+    conv.members = await this.addOptionsToUsers(conv.members, body.chef._id);
     this.webSocketsService.upgardingToAdmin(conv);
 
     //set conv notifs
@@ -779,7 +788,11 @@ export class ConvService {
       );
       //fill members
       conv = await this.fillMembers(conv);
+      //set operations
+
+      conv.members = await this.addOptionsToUsers(conv.members, body.chef._id);
       //set websocket to notify the members of the new chef
+
       this.webSocketsService.upgardingToChef(conv);
       //set conv notifs
       const visibility = conv.members;

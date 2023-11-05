@@ -527,6 +527,7 @@ export class UserService {
     const reciever = await this.UserModel.findOne({
       _id: recieverId,
     }).exec();
+
     const addreqs = reciever.addReqs;
 
     for (let i = 0; i < addreqs.length; i++) {
