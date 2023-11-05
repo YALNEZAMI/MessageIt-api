@@ -57,14 +57,14 @@ export class UserController {
     if (id == 'undefined') {
       return null;
     }
-    return this.userService.findOne(id);
+    return this.userService.findById(id);
   }
   @Get('/findreqSentToMe/:id')
-  friendReqSentToMe(@Param('id') id: string) {
+  getNotifs(@Param('id') id: string) {
     if (id == 'undefined') {
       return null;
     }
-    return this.userService.findreqSentToMe(id);
+    return this.userService.getNotifs(id);
   }
 
   @Post('/ofConv')
@@ -75,10 +75,12 @@ export class UserController {
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     const res = await this.userService.update(id, updateUserDto);
-
     return res;
   }
-
+  @Patch('resetAccepters/:id')
+  resetAccepters(@Param('id') id: string) {
+    return this.userService.resetAccepters(id);
+  }
   @Patch('/password/reset')
   async resetPassword(@Body() updateUserDto: UpdateUserDto) {
     const res = await this.userService.resetPassword(updateUserDto);

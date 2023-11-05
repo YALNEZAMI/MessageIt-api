@@ -21,6 +21,10 @@ export class Conv {
   type: string; //groupe or private
   @Prop({ required: false })
   admins: any[];
+  @Prop({ required: false })
+  messages: any[];
+  @Prop({ required: false })
+  medias: any[];
   @Prop({ required: true })
   createdAt: Date;
   @Prop({ required: false })

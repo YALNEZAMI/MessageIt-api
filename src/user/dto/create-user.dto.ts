@@ -16,13 +16,15 @@ export class CreateUserDto {
   @Column()
   photo: string;
   @Column()
-  addReq: string[];
+  addReq: any[] = [];
   @Column()
-  friends: string[];
+  friends: string[] = [];
   @Column()
-  status: string;
+  status: string = 'offline';
   @Column()
-  theme: string;
+  theme: string = 'basic';
   @Column()
-  lastConnection: Date;
+  lastConnection: Date = new Date();
+  @Column()
+  accepters?: any[] = [];
 }

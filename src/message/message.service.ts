@@ -40,7 +40,7 @@ export class MessageService {
     createMessageDto.vus = [];
     createMessageDto.vus.push(createMessageDto.sender);
     //set the user online
-    await this.sessionService.setStatus(createMessageDto.sender);
+    await this.sessionService.setStatusOnline(createMessageDto.sender);
     //files
     const filesNames = [];
 
@@ -79,7 +79,7 @@ export class MessageService {
   }
   async fillMakerAndRecieverOfNotif(notif: any) {
     notif.maker = await this.userService.findConfidentialUser(notif.maker);
-    if (notif.reciever != undefined) {
+    if (notif.reciever != undefined && notif.reciever != '') {
       notif.reciever = await this.userService.findConfidentialUser(
         notif.reciever,
       );
@@ -144,13 +144,15 @@ export class MessageService {
     const messages: any = await this.messageModel.find({
       conv: idConv,
       visibility: { $in: [idUser] },
-      typeMsg: 'message',
+      // typeMsg: 'message',
     });
     //null case
     if (messages.length == 0) return null;
     let message = messages[messages.length - 1];
     //decrypte
-    message = this.decryptOne(message);
+    if (message.typeMsg == 'message') {
+      message = this.decryptOne(message);
+    }
 
     return message;
   }
@@ -170,9 +172,19 @@ export class MessageService {
       )
       .exec();
 
-    let message = await this.messageModel.findById(body.idMessage).exec();
+    let message: any = await this.messageModel.findById(body.idMessage).exec();
     if (message == null) {
       return;
+    }
+    if (message.typeMsg == 'notif') {
+      message.maker = await this.userService.findConfidentialUser(
+        message.maker,
+      );
+      if (message.reciever != '' && message.reciever != undefined) {
+        message.reciever = await this.userService.findConfidentialUser(
+          message.reciever,
+        );
+      }
     }
     //decrypte message text
     message = this.decryptOne(message);
@@ -242,6 +254,7 @@ export class MessageService {
     } else {
       messages = await this.messageModel
         .find({ conv: idConv, visibility: { $in: [idUser] } })
+
         .skip(skip)
         .limit(limit)
         .exec();
@@ -356,25 +369,31 @@ export class MessageService {
 
     return messages;
   }
-
   async appendUp(idConv: string, idMessage: string, userId: string) {
-    let range = await this.getRange(idConv, idMessage, userId);
-    if (range == 0) return [];
+    //get The range of last message
+    let skip = await this.getRange(idConv, idMessage, userId);
+    //get the total number of messages
+    const totalCount = await this.messageModel.countDocuments({
+      conv: idConv,
+      visibility: { $in: [userId] },
+    });
+    //deal with exeption cases
+    if (skip == 0) return [];
     let limit: number = 20;
-    if (range < 20) {
-      limit = range;
-      range = 0;
+    if (totalCount - skip <= 20) {
+      limit = skip;
+      skip = 0;
     }
-
+    //get messages from database
     let messages = await this.messageModel
       .find({ conv: idConv, visibility: { $in: [userId] } })
-      .skip(range)
+      .skip(skip)
       .limit(limit)
       .exec();
     //replace sender<string> by sender<user>
     //replace ref<strg> by ref<message> and its sender<string> by sender<user>
     messages = await this.fillFields(messages);
-    //decrypte
+    //decrypte messages textes
     messages = this.decrypt(messages);
 
     return messages;
@@ -387,7 +406,7 @@ export class MessageService {
     this.webSocketService.onSetVus(body);
     const id = body.myId;
     //set viewver as Oline
-    this.sessionService.setStatus(id);
+    this.sessionService.setStatusOnline(id);
     const idConv = body.idConv;
     this.messageModel
       .updateMany({ conv: idConv }, { $addToSet: { vus: id } })
@@ -447,6 +466,7 @@ export class MessageService {
     //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
 
     const obj = {
+      msg: msg,
       idMsg: msg._id,
       idUser: msg.sender,
       operation: 'deleteForAll',
@@ -469,9 +489,14 @@ export class MessageService {
   }
   async deleteForMe(object: any): Promise<any> {
     //object:{idMsg:string,idUser:string,memberLength:number,operation:'deleteForMe'||'deleteForAll}
-    object.operation = 'deleteForMe';
-    this.webSocketService.onMessageDeleted(object);
     const msg = await this.messageModel.findOne({ _id: object.idMsg }).exec();
+    if (msg == null) return;
+    object.operation = 'deleteForMe';
+
+    const tab = await this.fillFields([msg]);
+    object.msg = tab[0];
+    this.webSocketService.onMessageDeleted(object);
+
     if (msg.visibility.length == 1) {
       return await this.remove(object.idMsg);
     }

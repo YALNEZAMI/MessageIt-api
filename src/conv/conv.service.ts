@@ -35,9 +35,7 @@ export class ConvService {
         if (user != null) members.push(user);
       }),
     );
-
     conv.members = members;
-
     return conv;
   }
   /**
@@ -87,6 +85,17 @@ export class ConvService {
    * @returns the conversation created
    */
   async create(createConvDto: CreateConvDto) {
+    if (
+      !this.userService.areFriends(
+        createConvDto.members[0],
+        createConvDto.members[1],
+      )
+    ) {
+      return {
+        error:
+          "you can't create a conversation with a user that you are not friends with",
+      };
+    }
     //set theme
     if (createConvDto.theme == undefined) {
       createConvDto.theme = 'basic';
@@ -105,9 +114,9 @@ export class ConvService {
       //set type
       if (createConvDto.members.length > 2) {
         createConvDto.type = 'groupe';
+        createConvDto.admins = [];
       } else {
         createConvDto.type = 'private';
-        createConvDto.admins = [];
       }
       const convCreated = await this.ConvModel.create(createConvDto);
       const newId = convCreated._id.toString();
@@ -164,6 +173,7 @@ export class ConvService {
   async getMembers(idConv: string, myId: string) {
     let res: any[] = [];
     const conv: any = await this.findOne(idConv);
+    if (conv == null) return null;
     const UserIds: string[] = conv.members;
     await Promise.all(
       UserIds.map(async (element) => {
@@ -184,6 +194,7 @@ export class ConvService {
   async getLastMessage(idConv: string, idUser: string) {
     return await this.messageService.getLastMessage(idConv, idUser);
   }
+
   /**
    *
    * @param id the id of the user
@@ -191,7 +202,7 @@ export class ConvService {
    */
   async getMyConvs(id: string) {
     //set the user online
-    await this.sessionService.setStatus(id);
+    await this.sessionService.setStatusOnline(id);
     //get all conversations of the user
     let myConvs: any = await this.convOfUser(id);
 
@@ -200,12 +211,23 @@ export class ConvService {
       myConvs.map(async (conv: any) => {
         //set the members
         conv = await this.fillMembers(conv);
+        //set operation to members
+        conv.members = await this.addOptionsToUsers(conv.members, id);
         //set name and photo
         conv = await this.setNameAndPhoto(conv, id);
-
         //set last message
         const lastMessage = await this.getLastMessage(conv._id.toString(), id);
-
+        const messages = await this.messageService.findMessageOfConv(
+          conv._id.toString(),
+          id,
+        );
+        conv.messages = messages;
+        //set medias
+        const medias = await this.messageService.getMedias(
+          conv._id.toString(),
+          id,
+        );
+        conv.medias = medias;
         //set last message as recieved
         if (lastMessage != null) {
           const lastMessageFinal = await this.messageService.setRecievedBy({
@@ -214,8 +236,8 @@ export class ConvService {
           });
 
           conv.lastMessage = lastMessageFinal;
+
           //set notif web socket
-          //TODO undestande this notif
           this.webSocketsService.onRecievedMessage(lastMessageFinal);
         }
         return conv;
@@ -228,7 +250,6 @@ export class ConvService {
       const bDate = b.lastMessage ? b.lastMessage.date : b.createdAt;
       return bDate - aDate;
     });
-
     return myConvs;
   }
   /**
@@ -297,10 +318,10 @@ export class ConvService {
         }
         //iterate over the members to find out if the name of one of them contains the key word
         conv.members = await Promise.all(
-          conv.members.map(async (member: any) => {
+          conv.members.map(async (member: string) => {
             const user = await this.userService.findOne(member);
             const nameUser = user.firstName + ' ' + user.lastName;
-            if (nameUser.includes(key)) {
+            if (nameUser.includes(key) && member != myid) {
               res.add(conv);
             }
             return member;
@@ -373,6 +394,7 @@ export class ConvService {
         maker: admin._id,
         typeMsg: 'notif',
         sous_type: 'convNameChanged',
+        reciever: '',
       });
     }
     if (updateConvDto.description != conv.description) {
@@ -383,6 +405,7 @@ export class ConvService {
         maker: admin._id,
         typeMsg: 'notif',
         sous_type: 'convDescriptionChanged',
+        reciever: '',
       });
     }
     if (updateConvDto.theme != conv.theme) {
@@ -393,6 +416,7 @@ export class ConvService {
         maker: admin._id,
         typeMsg: 'notif',
         sous_type: 'convThemeChanged',
+        reciever: '',
       });
     }
     if (file == undefined) {
@@ -411,6 +435,7 @@ export class ConvService {
       maker: admin._id,
       typeMsg: 'notif',
       sous_type: 'convPhotoChanged',
+      reciever: '',
     });
     const filepath = process.env.api_url + '/user/uploads/' + file.filename;
     updateConvDto.photo = filepath;
@@ -517,40 +542,59 @@ export class ConvService {
    * @returns  the conversation deleted if the user is the last member, the conversation updated if not
    */
   async leaveConv(id: string, idConv: string): Promise<any> {
+    //get leaver
+    const leaver = await this.userService.findConfidentialUser(id);
+
     //make messages not visible any more
     await this.messageService.pullFromVisibilityOfConv(idConv, id);
     //set conv notifs
     let conv: any = await this.ConvModel.findById(idConv);
+    if (conv == null) return { error: 'conv not found' };
     conv = await this.fillMembers(conv);
 
-    const members = conv.members
-      .filter((member: any) => member._id != id)
-      .map((member: any) => member._id.toString());
-    const visibility = conv.members;
-
-    await this.messageService.createNotif({
+    conv.members = conv.members.filter((member: any) => member._id != id);
+    const membersIds = conv.members.map((member: any) => member._id.toString());
+    const visibility = membersIds;
+    const notif = {
       visibility: visibility,
       conv: idConv,
       maker: id,
       typeMsg: 'notif',
       sous_type: 'leaveConv',
-    });
+      reciever: '',
+    };
+    await this.messageService.createNotif(notif);
 
-    if (members.length == 0) {
-      return this.remove(idConv);
+    if (conv.members.length == 0) {
+      await this.remove(idConv);
+      this.webSocketsService.onLeavingConv({
+        conv: conv,
+        leaver: leaver,
+      });
     } else {
-      await this.ConvModel.updateOne(
-        { _id: idConv },
-        {
-          members: members,
-          $pull: { admins: id },
-        },
-      );
-      //set updated members of the conversation
+      //chef is leaver case
+      if (leaver._id.toString() == conv.chef) {
+        await this.ConvModel.updateOne(
+          { _id: idConv },
+          {
+            chef: membersIds[0],
+            members: membersIds,
+            $pull: { admins: id },
+          },
+        );
+        conv.chef = membersIds[0];
+      } else {
+        await this.ConvModel.updateOne(
+          { _id: idConv },
+          {
+            members: membersIds,
+            $pull: { admins: id },
+          },
+        );
+      }
 
       conv = await this.setNameAndPhoto(conv, id);
       //set websocket to notify the members of the new members
-      const leaver = this.userService.findConfidentialUser(id);
       this.webSocketsService.onLeavingConv({
         conv: conv,
         leaver: leaver,
@@ -570,7 +614,7 @@ export class ConvService {
       }),
     );
   }
-  makeGroupe(conv: any) {
+  async makeGroupe(conv: any) {
     conv.photo = process.env.api_url + '/user/uploads/group.png';
     conv.lastMessage = null;
     if (conv.name == '') {
@@ -578,7 +622,11 @@ export class ConvService {
     }
     conv.description = 'Write a description...';
     conv.theme = 'basic';
-    return this.ConvModel.create(conv);
+    let finaleConv: any = await this.ConvModel.create(conv);
+    //set web socket
+    finaleConv = await this.fillMembers(finaleConv);
+    this.webSocketsService.OnCreateConv(finaleConv);
+    return finaleConv;
   }
   typing(object: any) {
     this.webSocketsService.typing(object);
@@ -602,6 +650,8 @@ export class ConvService {
       conv.members.splice(conv.members.indexOf(idUser), 1);
       //set members
       conv = await this.fillMembers(conv);
+      //set operations
+      conv.members = await this.addOptionsToUsers(conv.members, idAdmin);
       //set websocket notif
       this.webSocketsService.onRemoveFromGroupe({
         idUser: idUser,
@@ -662,6 +712,9 @@ export class ConvService {
     ).exec();
     conv.members = Array.from(set);
     conv = await this.fillMembers(conv);
+    //set operations
+    conv.members = await this.addOptionsToUsers(conv.members, idAdmin);
+
     //set websocket to notify the members of the new members
     const convAndNewMembers = {
       conv: conv,
@@ -676,7 +729,7 @@ export class ConvService {
    */
   async upgradeToAdmin(body: any) {
     //body:{conv,user,admin}
-    const conv = await this.findOne(body.conv._id);
+    let conv = await this.findOne(body.conv._id);
     const admins = conv.admins;
     //check if the user operating the upgrading is the chef
     if (conv.chef != body.chef._id) return conv;
@@ -689,6 +742,12 @@ export class ConvService {
     );
     //set websocket to notify the members of the new admin
     conv.admins = [...admins, body.user._id];
+    //set members
+
+    conv = await this.fillMembers(conv);
+    //set operations
+
+    conv.members = await this.addOptionsToUsers(conv.members, body.chef._id);
     this.webSocketsService.upgardingToAdmin(conv);
 
     //set conv notifs
@@ -729,7 +788,11 @@ export class ConvService {
       );
       //fill members
       conv = await this.fillMembers(conv);
+      //set operations
+
+      conv.members = await this.addOptionsToUsers(conv.members, body.chef._id);
       //set websocket to notify the members of the new chef
+
       this.webSocketsService.upgardingToChef(conv);
       //set conv notifs
       const visibility = conv.members;
