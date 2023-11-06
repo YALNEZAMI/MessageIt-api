@@ -104,9 +104,10 @@ export class WebSocketsService {
   downgardingAdmin(@MessageBody() conv: any) {
     this.server.emit('downgardingAdmin', conv);
   }
-  @SubscribeMessage('convChanged')
-  convChanged(@MessageBody() conv: any) {
-    this.server.emit('convChanged', conv);
+  @SubscribeMessage('someConvChanged')
+  someConvChanged(@MessageBody() conv: any) {
+    this.server.emit('someConvChanged', conv);
+    console.log(conv);
   }
   @SubscribeMessage('onRemoveFriend')
   onRemoveFriend(@MessageBody() obj: { remover: string; removed: string }) {
@@ -114,6 +115,6 @@ export class WebSocketsService {
   }
   @SubscribeMessage('someUserUpdated')
   someUserUpdated(@MessageBody() user: any) {
-    this.server.emit('someUserUpdated', user);
+    this.server.emit('onSomeUserUpdated', user);
   }
 }

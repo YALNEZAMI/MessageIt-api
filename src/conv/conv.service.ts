@@ -423,8 +423,11 @@ export class ConvService {
       await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
       let conv = await this.findOne(id);
       conv = await this.fillMembers(conv);
+      //set operations
+      conv.members = await this.addOptionsToUsers(conv.members, admin._id);
+
       //set websocket notif convChanged
-      this.webSocketsService.convChanged(conv);
+      this.webSocketsService.someConvChanged(conv);
 
       return conv;
     }
@@ -459,8 +462,11 @@ export class ConvService {
         // Handle the case where the file exists
       }
     });
+    //set operations
+    conv.members = await this.addOptionsToUsers(conv.members, admin._id);
+
     //set websocket notif convChanged
-    this.webSocketsService.convChanged(conv);
+    this.webSocketsService.someConvChanged(conv);
     return conv;
   }
   /**
@@ -746,7 +752,6 @@ export class ConvService {
 
     conv = await this.fillMembers(conv);
     //set operations
-
     conv.members = await this.addOptionsToUsers(conv.members, body.chef._id);
     this.webSocketsService.upgardingToAdmin(conv);
 
