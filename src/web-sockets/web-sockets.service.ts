@@ -107,7 +107,6 @@ export class WebSocketsService {
   @SubscribeMessage('someConvChanged')
   someConvChanged(@MessageBody() conv: any) {
     this.server.emit('someConvChanged', conv);
-    console.log(conv);
   }
   @SubscribeMessage('onRemoveFriend')
   onRemoveFriend(@MessageBody() obj: { remover: string; removed: string }) {
