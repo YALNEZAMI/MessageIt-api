@@ -332,7 +332,10 @@ export class UserService {
     if (id == 'undefined') {
       return null;
     }
-    const user = await this.UserModel.findOne({ _id: id }).exec();
+    const user = await this.UserModel.findOne(
+      { _id: id },
+      { password: 0 },
+    ).exec();
     let oldPhoto = user.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
     oldPhoto = nameOldPhotoSplit[nameOldPhotoSplit.length - 1];
@@ -356,12 +359,14 @@ export class UserService {
       );
     }
     const photoName = process.env.api_url + '/user/uploads/' + file.filename;
+    //update the user object photo
+    user.photo = photoName;
     await this.UserModel.updateOne({ _id: id }, { photo: photoName });
     //notify other of changes
-
     const userFinal = await this.findConfidentialUser(id);
+
     this.webSocketService.someUserUpdated(userFinal);
-    return { photo: photoName };
+    return user;
   }
   async remove(id: string): Promise<any> {
     const user = await this.UserModel.findOne({ _id: id }).exec();
