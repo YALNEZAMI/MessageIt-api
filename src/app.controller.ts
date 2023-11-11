@@ -14,7 +14,9 @@ export class AppController {
   //google auth endpoints
   @Get('auth/google')
   @UseGuards(AuthGuard('google'))
-  async googleAuth(@Req() req: any) {}
+  async googleAuth(@Req() req: any) {
+    console.log('googleAuth', req);
+  }
 
   //google auth endpoints
   @Get('auth/google/callback')
