@@ -6,10 +6,9 @@ import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor() {
     super({
-      clientID:
-        '130785254541-l6870e6ookedn0sthl0v24r06n96roju.apps.googleusercontent.com',
-      clientSecret: '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',
-      callbackURL: 'http://localhost:3000/auth/google/callback',
+      clientID: process.env.clientIDGoogle,
+      clientSecret: process.env.clientSecretGoogle,
+      callbackURL: process.env.api_url + '/auth/google/callback',
       scope: ['email', 'profile'],
     });
   }
@@ -29,10 +28,4 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     };
     done(null, user);
   }
-  /**ya29.a0AfB_byDkbsDAEaM6NeVavGNo6o6M_
-   * dRYPBJWsOCSaDLlFFllc2qneB6jQsg-
-   * oaj9dVpvTAbFczqvQMAsmXVmbnju0JcgSqF4a
-   * nccVTSaqwVoBVU7mJOYbXcVsA6A25eeAPQ6CO
-   * xLfB39r8Z9cxLxqV1ZAKcb3Skxj1PiaCgYKAU
-   * 8SARASFQHGX2MiPuCZZCyiBuBVvb3DxfEQ-Q0171 */
 }

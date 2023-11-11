@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { UserService } from './user/user.service';
 
@@ -13,5 +14,12 @@ export class AppService {
       return 'No user from google';
     }
     return await this.userService.signUpWithGoogle(req.user);
+  }
+  //auth by facebook
+  async facebookLogin(req: any) {
+    if (!req.user) {
+      return 'No user from google';
+    }
+    return await this.userService.signUpWithFfcebook(req.user);
   }
 }

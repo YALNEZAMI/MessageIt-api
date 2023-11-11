@@ -170,7 +170,7 @@ export class UserService {
 
     return await this.UserModel.findOne({ email: email }).exec();
   }
-  async findForGoogle(id: string) {
+  async findForOtherAuthWays(id: string) {
     const confidentielUser: any = await this.UserModel.findOne(
       { _id: id },
       {
@@ -620,6 +620,37 @@ export class UserService {
       lastName: userGoogle.lastName,
       photo: userGoogle.photo,
       signUpType: 'google',
+      theme: 'basic',
+      status: 'online',
+      accepters: [],
+      friends: [],
+      addReqs: [],
+      lastConnection: new Date(),
+    };
+    const userCreated = await this.UserModel.create(userToCreate);
+    const userFinal: any = await this.UserModel.findOne(
+      { _id: userCreated._id },
+      { password: 0, password2: 0, codePassword: 0 },
+    ).exec();
+    userFinal.convs = [];
+
+    return userFinal;
+  }
+  async signUpWithFfcebook(userFacebook: any) {
+    const userExisting = await this.UserModel.findOne({
+      idFacebook: userFacebook._id,
+      signUpType: 'facebook',
+    }).exec();
+
+    if (userExisting != null) {
+      return userExisting;
+    }
+    const userToCreate = {
+      idFacebook: userFacebook._id,
+      firstName: userFacebook.firstName,
+      lastName: userFacebook.lastName,
+      photo: userFacebook.photo,
+      signUpType: 'facebook',
       theme: 'basic',
       status: 'online',
       accepters: [],

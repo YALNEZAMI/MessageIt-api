@@ -59,12 +59,12 @@ export class UserController {
     }
     return this.userService.findById(id);
   }
-  @Get('findForGoogle/:id')
-  findForGoogle(@Param('id') id: string) {
+  @Get('findForOtherAuthWays/:id')
+  findForOtherAuthWays(@Param('id') id: string) {
     if (id == 'undefined') {
       return null;
     }
-    return this.userService.findForGoogle(id);
+    return this.userService.findForOtherAuthWays(id);
   }
   @Get('/findreqSentToMe/:id')
   getNotifs(@Param('id') id: string) {
