@@ -23,6 +23,6 @@ export class AppController {
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req: any, @Res() res: any) {
     const user = await this.appService.googleLogin(req);
-    res.redirect('http://localhost:4200/setGoogleUser?id=' + user._id);
+    res.redirect(process.env.frontUrl + '/setGoogleUser?id=' + user._id);
   }
 }
