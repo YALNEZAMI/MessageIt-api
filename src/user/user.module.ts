@@ -5,6 +5,7 @@ import { UserController } from './user.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './entities/user.entity';
 import { WebSocketsModule } from 'src/web-sockets/web-sockets.module';
+import { GoogleStrategy } from '../google.strategy';
 
 @Module({
   exports: [UserService],
@@ -18,6 +19,6 @@ import { WebSocketsModule } from 'src/web-sockets/web-sockets.module';
     ]),
   ],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [UserService, GoogleStrategy],
 })
 export class UserModule {}

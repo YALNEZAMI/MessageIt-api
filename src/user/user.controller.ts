@@ -21,7 +21,7 @@ import { extname } from 'path';
 // import * as path from 'path';
 import { Response } from 'express';
 import { UploadedFileInterface } from 'src/interfaces/photo';
-// import { env } from 'src/env';
+
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -58,6 +58,13 @@ export class UserController {
       return null;
     }
     return this.userService.findById(id);
+  }
+  @Get('findForGoogle/:id')
+  findForGoogle(@Param('id') id: string) {
+    if (id == 'undefined') {
+      return null;
+    }
+    return this.userService.findForGoogle(id);
   }
   @Get('/findreqSentToMe/:id')
   getNotifs(@Param('id') id: string) {

@@ -10,9 +10,9 @@ export class User {
   @Prop({ required: true })
   lastName: string;
   @IsEmail()
-  @Prop({ required: true })
+  @Prop({ required: false })
   email: string;
-  @Prop({ required: true })
+  @Prop({ required: false })
   password: string;
   @Prop({ required: true })
   photo: string;
@@ -32,6 +32,10 @@ export class User {
   theme: string;
   @Prop({ required: true })
   accepters: any[];
+  @Prop({ required: false })
+  signUpType: string;
+  @Prop({ required: false })
+  idGoogle: string;
 }
 export const UserSchema = SchemaFactory.createForClass(User);
 export type UserDocument = User & Document;

@@ -16,6 +16,8 @@ export class CreateUserDto {
   @Column()
   photo: string;
   @Column()
+  signUpType?: string;
+  @Column()
   addReq: any[] = [];
   @Column()
   friends: string[] = [];

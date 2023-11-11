@@ -11,6 +11,7 @@ import { SessionModule } from './session/session.module';
 import { MailerModule } from './mailer/mailer.module';
 import { ConfigModule } from '@nestjs/config';
 import { ReactionModule } from './reaction/reaction.module';
+import { GoogleStrategy } from './google.strategy';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ import { ReactionModule } from './reaction/reaction.module';
     ReactionModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, GoogleStrategy],
 })
 export class AppModule {
   constructor() {}

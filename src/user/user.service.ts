@@ -32,6 +32,7 @@ export class UserService {
 
   async create(createUserDto: CreateUserDto) {
     //set theme
+    createUserDto.signUpType = 'basic';
     createUserDto.theme = 'basic';
     createUserDto.email = createUserDto.email.toLowerCase();
     createUserDto.photo = ' ';
@@ -59,7 +60,10 @@ export class UserService {
     createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
     createUserDto.photo = process.env.api_url + '/user/uploads/user.png';
     const userCreated = await this.UserModel.create(createUserDto);
-    const user = await this.findConfidentialUser(userCreated._id);
+    const user = await this.UserModel.findOne(
+      { _id: userCreated._id },
+      { password: 0, password2: 0, codePassword: 0 },
+    ).exec();
     return {
       status: 200,
       message: 'Success, you can login now !',
@@ -166,6 +170,26 @@ export class UserService {
 
     return await this.UserModel.findOne({ email: email }).exec();
   }
+  async findForGoogle(id: string) {
+    const confidentielUser: any = await this.UserModel.findOne(
+      { _id: id },
+      {
+        password: 0,
+        codePassword: 0,
+      },
+    );
+    if (confidentielUser == null) return;
+    this.webSocketService.login(confidentielUser);
+    //fill friends
+    confidentielUser.friends = await Promise.all(
+      confidentielUser.friends.map(async (friend: any) => {
+        friend = await this.findConfidentialUser(friend);
+        friend = await this.addOptionsToUser(friend, confidentielUser._id);
+        return friend;
+      }),
+    );
+    return confidentielUser;
+  }
   async findById(id: string) {
     const confidentielUser: any = await this.UserModel.findOne(
       { _id: id },
@@ -203,20 +227,6 @@ export class UserService {
           user.password,
         );
         if (matchPassword) {
-          delete user.password;
-          user.password = '';
-          //set as online
-          // setTimeout(
-          //   async () => {
-          //     const lastConnection: any = user.lastConnection;
-          //     const now: any = new Date();
-          //     const diff = now - lastConnection;
-          //     if (diff > 1000 * 60 * 5) {
-          //       await this.update(user._id, { status: 'offline' });
-          //     }
-          //   },
-          //   1000 * 60 * 5 + 1000,
-          // );
           await this.update(user._id, { lastConnection: new Date() });
           //set websocket subscription to notify friends
 
@@ -532,7 +542,7 @@ export class UserService {
     const reciever = await this.UserModel.findOne({
       _id: recieverId,
     }).exec();
-
+    if (reciever == null) return false;
     const addreqs = reciever.addReqs;
 
     for (let i = 0; i < addreqs.length; i++) {
@@ -594,5 +604,36 @@ export class UserService {
   }
   resetAccepters(id: string) {
     return this.UserModel.updateOne({ _id: id }, { accepters: [] }).exec();
+  }
+  async signUpWithGoogle(userGoogle: any) {
+    const userExisting = await this.UserModel.findOne({
+      idGoogle: userGoogle._id,
+      signUpType: 'google',
+    }).exec();
+
+    if (userExisting != null) {
+      return userExisting;
+    }
+    const userToCreate = {
+      idGoogle: userGoogle._id,
+      firstName: userGoogle.firstName,
+      lastName: userGoogle.lastName,
+      photo: userGoogle.photo,
+      signUpType: 'google',
+      theme: 'basic',
+      status: 'online',
+      accepters: [],
+      friends: [],
+      addReqs: [],
+      lastConnection: new Date(),
+    };
+    const userCreated = await this.UserModel.create(userToCreate);
+    const userFinal: any = await this.UserModel.findOne(
+      { _id: userCreated._id },
+      { password: 0, password2: 0, codePassword: 0 },
+    ).exec();
+    userFinal.convs = [];
+
+    return userFinal;
   }
 }
