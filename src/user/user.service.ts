@@ -615,7 +615,7 @@ export class UserService {
       return userExisting;
     }
     const userToCreate = {
-      idGoogle: userGoogle._id,
+      idGoogle: userGoogle.idGoogle,
       firstName: userGoogle.firstName,
       lastName: userGoogle.lastName,
       photo: userGoogle.photo,
@@ -646,7 +646,7 @@ export class UserService {
       return userExisting;
     }
     const userToCreate = {
-      idFacebook: userFacebook._id,
+      idFacebook: userFacebook.idFacebook,
       firstName: userFacebook.firstName,
       lastName: userFacebook.lastName,
       photo: userFacebook.photo,
