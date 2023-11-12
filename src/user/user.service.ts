@@ -677,7 +677,7 @@ export class UserService {
       return userExisting;
     }
     const userToCreate = {
-      idFacebook: userGithub.idGithub,
+      idGithub: userGithub.idGithub,
       firstName: userGithub.firstName,
       lastName: userGithub.lastName,
       photo: userGithub.photo,
