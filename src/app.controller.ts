@@ -34,11 +34,27 @@ export class AppController {
     console.log('facebookAuth', req);
   }
 
-  //google auth endpoints
+  //facebook auth endpoints
   @Get('auth/facebook/callback')
   @UseGuards(AuthGuard('facebook'))
   async facebookAuthRedirect(@Req() req: any, @Res() res: any) {
     const user = await this.appService.facebookLogin(req);
+    const id = user._id.toString();
+    res.redirect(process.env.frontUrl + `/setUser?id=${id}`);
+  }
+
+  //github auth endpoints
+  @Get('auth/github')
+  @UseGuards(AuthGuard('github'))
+  async githubAuth(@Req() req: any) {
+    console.log('githubAuth', req);
+  }
+
+  //github auth endpoints
+  @Get('auth/github/callback')
+  @UseGuards(AuthGuard('github'))
+  async githubAuthRedirect(@Req() req: any, @Res() res: any) {
+    const user = await this.appService.githubLogin(req);
     const id = user._id.toString();
     res.redirect(process.env.frontUrl + `/setUser?id=${id}`);
   }

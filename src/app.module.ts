@@ -13,6 +13,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ReactionModule } from './reaction/reaction.module';
 import { GoogleStrategy } from './google.strategy';
 import { FacebookStrategy } from './facebook.strategy';
+import { GithubStrategy } from './github.strategy';
 
 @Module({
   imports: [
@@ -32,7 +33,7 @@ import { FacebookStrategy } from './facebook.strategy';
     ReactionModule,
   ],
   controllers: [AppController],
-  providers: [AppService, GoogleStrategy, FacebookStrategy],
+  providers: [AppService, GoogleStrategy, FacebookStrategy, GithubStrategy],
 })
 export class AppModule {
   constructor() {}

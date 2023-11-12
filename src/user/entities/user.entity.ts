@@ -38,6 +38,8 @@ export class User {
   idGoogle: string;
   @Prop({ required: false })
   idFacebook: string;
+  @Prop({ required: false })
+  idGithub: string;
 }
 export const UserSchema = SchemaFactory.createForClass(User);
 export type UserDocument = User & Document;

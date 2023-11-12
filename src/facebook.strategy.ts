@@ -26,7 +26,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
       idFacebook: profile.id,
       firstName: profile.name.givenName,
       lastName: profile.name.familyName,
-      photo: 'http://localhost:3000/user/uploads/user.png',
+      photo: process.env.api_url + '/user/uploads/user.png',
       // Additional fields as needed
     };
 

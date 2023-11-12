@@ -636,7 +636,7 @@ export class UserService {
 
     return userFinal;
   }
-  async signUpWithFfcebook(userFacebook: any) {
+  async signUpWithFacebook(userFacebook: any) {
     const userExisting = await this.UserModel.findOne({
       idFacebook: userFacebook._id,
       signUpType: 'facebook',
@@ -651,6 +651,37 @@ export class UserService {
       lastName: userFacebook.lastName,
       photo: userFacebook.photo,
       signUpType: 'facebook',
+      theme: 'basic',
+      status: 'online',
+      accepters: [],
+      friends: [],
+      addReqs: [],
+      lastConnection: new Date(),
+    };
+    const userCreated = await this.UserModel.create(userToCreate);
+    const userFinal: any = await this.UserModel.findOne(
+      { _id: userCreated._id },
+      { password: 0, password2: 0, codePassword: 0 },
+    ).exec();
+    userFinal.convs = [];
+
+    return userFinal;
+  }
+  async signUpWithGithub(userGithub: any) {
+    const userExisting = await this.UserModel.findOne({
+      idGithub: userGithub.idGithub,
+      signUpType: 'github',
+    }).exec();
+
+    if (userExisting != null) {
+      return userExisting;
+    }
+    const userToCreate = {
+      idFacebook: userGithub.idGithub,
+      firstName: userGithub.firstName,
+      lastName: userGithub.lastName,
+      photo: userGithub.photo,
+      signUpType: 'github',
       theme: 'basic',
       status: 'online',
       accepters: [],

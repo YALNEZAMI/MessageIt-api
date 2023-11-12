@@ -18,8 +18,15 @@ export class AppService {
   //auth by facebook
   async facebookLogin(req: any) {
     if (!req.user) {
-      return 'No user from google';
+      return 'No user from facebook';
     }
-    return await this.userService.signUpWithFfcebook(req.user);
+    return await this.userService.signUpWithFacebook(req.user);
+  }
+  //auth by github
+  async githubLogin(req: any) {
+    if (!req.user) {
+      return 'No user from github';
+    }
+    return await this.userService.signUpWithGithub(req.user);
   }
 }
