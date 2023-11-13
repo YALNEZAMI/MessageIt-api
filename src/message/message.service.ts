@@ -24,6 +24,8 @@ export class MessageService {
   ) {}
   async create(object: any, files: any) {
     let createMessageDto: CreateMessageDto = JSON.parse(object.message);
+    //trim text
+    createMessageDto.text = createMessageDto.text.trim();
     //set typeMsg
     createMessageDto.typeMsg = 'message';
     //encrypt text
