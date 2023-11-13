@@ -606,8 +606,10 @@ export class UserService {
     return this.UserModel.updateOne({ _id: id }, { accepters: [] }).exec();
   }
   async signUpWithGoogle(userGoogle: any) {
+    console.log(userGoogle);
+
     const userExisting = await this.UserModel.findOne({
-      idGoogle: userGoogle._id,
+      idGoogle: userGoogle.idGoogle,
       signUpType: 'google',
     }).exec();
 
