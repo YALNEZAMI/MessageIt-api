@@ -96,6 +96,9 @@ export class ConvService {
           "you can't create a conversation with a user that you are not friends with",
       };
     }
+    if (createConvDto.type == 'private') {
+      createConvDto.name = '';
+    }
     //set theme
     if (createConvDto.theme == undefined) {
       createConvDto.theme = 'basic';
@@ -394,6 +397,9 @@ export class ConvService {
     conv.members = await this.addOptionsToUsers(conv.members, admin._id);
 
     const updateConvDto: UpdateConvDto = JSON.parse(object.conv);
+    if (conv.type == 'private') {
+      updateConvDto.name = '';
+    }
     if (updateConvDto.name != conv.name) {
       //update db conv name
       conv.name = updateConvDto.name;
