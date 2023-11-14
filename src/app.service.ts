@@ -6,7 +6,7 @@ import { UserService } from './user/user.service';
 export class AppService {
   constructor(private userService: UserService) {}
   getHello(): string {
-    return 'Hello World!';
+    return 'Hello My World!';
   }
   //auth by google
   async googleLogin(req: any) {
