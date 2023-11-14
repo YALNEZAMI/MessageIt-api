@@ -23,6 +23,9 @@ import { GithubStrategy } from './github.strategy';
     }),
     MongooseModule.forRoot(process.env.mongo_url, {
       dbName: process.env.mongo_db_name,
+      writeConcern: {
+        w: 'majority',
+      },
     }),
     UserModule,
     ConvModule,
