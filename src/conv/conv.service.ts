@@ -96,6 +96,9 @@ export class ConvService {
           "you can't create a conversation with a user that you are not friends with",
       };
     }
+    if (createConvDto.type == 'private') {
+      createConvDto.name = '';
+    }
     //set theme
     if (createConvDto.theme == undefined) {
       createConvDto.theme = 'basic';
@@ -110,6 +113,10 @@ export class ConvService {
       exist.conv = await this.fillMembers(exist.conv);
       return exist.conv;
     } else {
+      //set description if doesn't exist
+      if (createConvDto.description == undefined) {
+        createConvDto.description = '';
+      }
       createConvDto.photo = process.env.api_url + '/user/uploads/user.png';
       //set type
       if (createConvDto.members.length > 2) {
@@ -379,15 +386,24 @@ export class ConvService {
    * @returns  the conversation updated
    */
   async update(id: string, object: any, file: Express.Multer.File) {
-    let conv = await this.findOne(id);
-    conv = await this.fillMembers(conv);
+    const admin = JSON.parse(object.admin);
 
-    const visibility = conv.members.map((member: any) => member._id);
+    let conv = await this.findOne(id);
+    //before filling members ,we get the visibility for notifs in Conv
+    const visibility = conv.members;
+    //fill members objects
+    conv = await this.fillMembers(conv);
+    //set operations
+    conv.members = await this.addOptionsToUsers(conv.members, admin._id);
 
     const updateConvDto: UpdateConvDto = JSON.parse(object.conv);
-    const admin = JSON.parse(object.admin);
+    if (conv.type == 'private') {
+      updateConvDto.name = '';
+    }
     if (updateConvDto.name != conv.name) {
-      //set conv notifs
+      //update db conv name
+      conv.name = updateConvDto.name;
+      //create a message to notify the change of name
       await this.messageService.createNotif({
         visibility: visibility,
         conv: id,
@@ -395,10 +411,15 @@ export class ConvService {
         typeMsg: 'notif',
         sous_type: 'convNameChanged',
         reciever: '',
+        recievedBy: [object.admin._id],
       });
     }
+
     if (updateConvDto.description != conv.description) {
-      //set conv notifs
+      //update db conv description
+      conv.description = updateConvDto.description;
+
+      //create a message to notify the change of description
       await this.messageService.createNotif({
         visibility: visibility,
         conv: id,
@@ -406,10 +427,13 @@ export class ConvService {
         typeMsg: 'notif',
         sous_type: 'convDescriptionChanged',
         reciever: '',
+        recievedBy: [object.admin._id],
       });
     }
     if (updateConvDto.theme != conv.theme) {
-      //set conv notifs
+      //update db conv theme
+      conv.theme = updateConvDto.theme;
+      //create a message to notify the change of theme
       await this.messageService.createNotif({
         visibility: visibility,
         conv: id,
@@ -417,57 +441,58 @@ export class ConvService {
         typeMsg: 'notif',
         sous_type: 'convThemeChanged',
         reciever: '',
+        recievedBy: [object.admin._id],
       });
     }
+    //no photo case
     if (file == undefined) {
+      //update in db
       await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
-      let conv = await this.findOne(id);
-      conv = await this.fillMembers(conv);
-      //set operations
-      conv.members = await this.addOptionsToUsers(conv.members, admin._id);
 
       //set websocket notif convChanged
       this.webSocketsService.someConvChanged(conv);
-
+      return conv;
+    } else {
+      //photo case
+      //create a message to notify the change of photo
+      await this.messageService.createNotif({
+        visibility: visibility,
+        conv: id,
+        maker: admin._id,
+        typeMsg: 'notif',
+        sous_type: 'convPhotoChanged',
+        reciever: '',
+        recievedBy: [object.admin._id],
+      });
+      const filepath = process.env.api_url + '/user/uploads/' + file.filename;
+      //get the photo url and update the conv
+      updateConvDto.photo = filepath;
+      //getting old conv and old photo path to delete it
+      const oldPhoto = conv.photo;
+      //update db conv photo path
+      conv.photo = filepath;
+      //updating in db
+      await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
+      //remove old photo
+      fs.access(
+        'assets/imagesOfConvs/' + oldPhoto,
+        fs.constants.F_OK,
+        (err) => {
+          if (err) {
+            // Handle the case where the file does not exist
+          } else {
+            fs.unlink('assets/imagesOfConvs/' + oldPhoto, (err) => {
+              if (err) {
+                console.error(err);
+              }
+            });
+          }
+        },
+      );
+      //set websocket notif convChanged
+      this.webSocketsService.someConvChanged(conv);
       return conv;
     }
-    //set conv notifs
-    await this.messageService.createNotif({
-      visibility: visibility,
-      conv: id,
-      maker: admin._id,
-      typeMsg: 'notif',
-      sous_type: 'convPhotoChanged',
-      reciever: '',
-    });
-    const filepath = process.env.api_url + '/user/uploads/' + file.filename;
-    updateConvDto.photo = filepath;
-    //getting old conv and old photo path to delete it
-    const oldPhoto = conv.photo;
-    //update conv photo path
-    conv.photo = filepath;
-
-    await this.ConvModel.updateOne({ _id: id }, updateConvDto).exec();
-    //set photo
-    fs.access('assets/imagesOfConvs/' + oldPhoto, fs.constants.F_OK, (err) => {
-      if (err) {
-        // Handle the case where the file does not exist
-      } else {
-        fs.unlink('assets/imagesOfConvs/' + oldPhoto, (err) => {
-          if (err) {
-            console.error(err);
-            return;
-          }
-        });
-        // Handle the case where the file exists
-      }
-    });
-    //set operations
-    conv.members = await this.addOptionsToUsers(conv.members, admin._id);
-
-    //set websocket notif convChanged
-    this.webSocketsService.someConvChanged(conv);
-    return conv;
   }
   /**
    *
@@ -568,6 +593,7 @@ export class ConvService {
       typeMsg: 'notif',
       sous_type: 'leaveConv',
       reciever: '',
+      recievedBy: [],
     };
     await this.messageService.createNotif(notif);
 
@@ -672,6 +698,7 @@ export class ConvService {
         reciever: idUser,
         typeMsg: 'notif',
         sous_type: 'removeMember',
+        recievedBy: [idAdmin],
       });
       //make messages not visible any more
       await this.messageService.pullFromVisibilityOfConv(idConv, idUser);
@@ -708,6 +735,7 @@ export class ConvService {
           reciever: member,
           typeMsg: 'notif',
           sous_type: 'addMember',
+          recievedBy: [idAdmin],
         });
       }),
     );
@@ -765,6 +793,7 @@ export class ConvService {
       reciever: body.user._id,
       typeMsg: 'notif',
       sous_type: 'upgradeToAdmin',
+      recievedBy: [body.admin._id],
     });
     return conv;
   }
@@ -809,6 +838,7 @@ export class ConvService {
         reciever: body.user._id,
         typeMsg: 'notif',
         sous_type: 'upgradeToChef',
+        recievedBy: [chef._id],
       });
       return conv;
     } else {
@@ -845,6 +875,7 @@ export class ConvService {
         reciever: body.user._id,
         typeMsg: 'notif',
         sous_type: 'downgradeAdmin',
+        recievedBy: [],
       };
       //creating notif
       await this.messageService.createNotif(notif);

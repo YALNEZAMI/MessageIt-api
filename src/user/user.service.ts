@@ -344,29 +344,27 @@ export class UserService {
     }
     const user = await this.UserModel.findOne(
       { _id: id },
-      { password: 0 },
+      { password: 0, password2: 0, codePassword: 0 },
     ).exec();
-    let oldPhoto = user.photo;
+    const oldPhoto = user.photo;
     const nameOldPhotoSplit = oldPhoto.split('/');
-    oldPhoto = nameOldPhotoSplit[nameOldPhotoSplit.length - 1];
-    if (oldPhoto !== process.env.defaultUserPhoto) {
-      fs.access(
-        'assets/imagesOfConvs/' + oldPhoto,
-        fs.constants.F_OK,
-        (err) => {
-          if (err) {
-            // Handle the case where the file does not exist
-          } else {
-            fs.unlink('assets/imagesOfConvs/' + oldPhoto, (err) => {
-              if (err) {
-                console.error(err);
-                return;
-              }
-            });
-            // Handle the case where the file exists
-          }
-        },
-      );
+    const nameOldPhoto = nameOldPhotoSplit[nameOldPhotoSplit.length - 1];
+    if (nameOldPhoto !== process.env.defaultUserPhoto) {
+      //delete old photo if not the default one
+      fs.access(oldPhoto, fs.constants.F_OK, (err) => {
+        if (err) {
+          console.log(err);
+
+          // Handle the case where the file does not exist
+        } else {
+          fs.unlink(oldPhoto, (err) => {
+            if (err) {
+              console.error(err);
+            }
+          });
+          // Handle the case where the file exists
+        }
+      });
     }
     const photoName = process.env.api_url + '/user/uploads/' + file.filename;
     //update the user object photo
@@ -606,8 +604,6 @@ export class UserService {
     return this.UserModel.updateOne({ _id: id }, { accepters: [] }).exec();
   }
   async signUpWithGoogle(userGoogle: any) {
-    console.log(userGoogle);
-
     const userExisting = await this.UserModel.findOne({
       idGoogle: userGoogle.idGoogle,
       signUpType: 'google',
