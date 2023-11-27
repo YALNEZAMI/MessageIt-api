@@ -491,6 +491,11 @@ export class ConvService {
         },
       );
       //set websocket notif convChanged
+      const messages = await this.messageService.findMessageOfConv(
+        conv._id.toString(),
+        id,
+      );
+      conv.messages = messages;
       this.webSocketsService.someConvChanged(conv);
       return conv;
     }
