@@ -397,6 +397,7 @@ export class ConvService {
     conv.members = await this.addOptionsToUsers(conv.members, admin._id);
 
     const updateConvDto: UpdateConvDto = JSON.parse(object.conv);
+    updateConvDto.members = visibility; //get ids not objects
     if (conv.type == 'private') {
       updateConvDto.name = '';
     }
