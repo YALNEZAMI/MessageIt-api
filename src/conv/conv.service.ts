@@ -491,11 +491,7 @@ export class ConvService {
         },
       );
       //set websocket notif convChanged
-      const messages = await this.messageService.findMessageOfConv(
-        conv._id.toString(),
-        id,
-      );
-      conv.messages = messages;
+
       this.webSocketsService.someConvChanged(conv);
       return conv;
     }
@@ -787,6 +783,7 @@ export class ConvService {
     conv = await this.fillMembers(conv);
     //set operations
     conv.members = await this.addOptionsToUsers(conv.members, body.chef._id);
+
     this.webSocketsService.upgardingToAdmin(conv);
 
     //set conv notifs
