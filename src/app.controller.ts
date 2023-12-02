@@ -24,7 +24,8 @@ export class AppController {
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req: any, @Res() res: any) {
     const user = await this.appService.googleLogin(req);
-    res.redirect(process.env.frontUrl + '/setUser?id=' + user._id);
+
+    res.redirect(process.env.frontUrl + '/#/setUser?id=' + user._id);
   }
 
   //facebook auth endpoints
@@ -40,7 +41,7 @@ export class AppController {
   async facebookAuthRedirect(@Req() req: any, @Res() res: any) {
     const user = await this.appService.facebookLogin(req);
     const id = user._id.toString();
-    res.redirect(process.env.frontUrl + `/setUser?id=${id}`);
+    res.redirect(process.env.frontUrl + `/#/setUser?id=${id}`);
   }
 
   //github auth endpoints
@@ -56,6 +57,6 @@ export class AppController {
   async githubAuthRedirect(@Req() req: any, @Res() res: any) {
     const user = await this.appService.githubLogin(req);
     const id = user._id.toString();
-    res.redirect(process.env.frontUrl + `/setUser?id=${id}`);
+    res.redirect(process.env.frontUrl + `/#/setUser?id=${id}`);
   }
 }
