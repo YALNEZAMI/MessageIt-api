@@ -49,15 +49,14 @@ export class SessionService {
     } catch (error) {}
   }
   async setStatusMannualy(id: string, body: any) {
-    try {
-      if (body.status === 'online') {
-        await this.setStatusOnline(id);
-      } else {
-        await this.userService.updateOne({ _id: id }, { status: body.status });
-        const finalUser = await this.userService.findConfidentialUser(id);
-        //set online websocket
-        this.webSocketService.statusChange(finalUser);
-      }
-    } catch (error) {}
+    console.log('settatusmannualy ');
+    if (body.status === 'online') {
+      await this.setStatusOnline(id);
+    } else {
+      await this.userService.updateOne({ _id: id }, { status: body.status });
+      const finalUser = await this.userService.findConfidentialUser(id);
+      //set online websocket
+      this.webSocketService.statusChange(finalUser);
+    }
   }
 }
