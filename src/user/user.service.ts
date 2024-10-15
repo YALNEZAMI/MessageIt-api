@@ -489,7 +489,11 @@ export class UserService {
     return await this.pullAddReq(canceler, canceled);
   }
   async accept(myId: string, FriendId: string) {
-    if (this.areFriends(myId, FriendId)) {
+    console.log(
+      'this.areFriends(myId, FriendId)',
+      await this.areFriends(myId, FriendId),
+    );
+    if (await this.areFriends(myId, FriendId)) {
       const currentUser = await this.UserModel.findById(myId);
       const friend = await this.UserModel.findById(FriendId);
       return { firstAdd: currentUser, secAdd: friend };
