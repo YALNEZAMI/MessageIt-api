@@ -49,7 +49,6 @@ export class SessionService {
     } catch (error) {}
   }
   async setStatusMannualy(id: string, body: any) {
-    console.log('settatusmannualy ');
     if (body.status === 'online') {
       await this.setStatusOnline(id);
     } else {
